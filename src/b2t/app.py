@@ -5,7 +5,6 @@ from loguru import logger
 
 from b2t.graph import build_graph
 from b2t.llm import ConverterLLM, OpenAIConverter
-from b2t.state import PipelineState
 
 
 def convert_deck(
