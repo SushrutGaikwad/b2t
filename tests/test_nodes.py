@@ -63,3 +63,12 @@ def test_write_output_node(deck_copy, tmp_path):
     assert update["typst_path"] == out / "main.typ"
     assert (out / "main.typ").read_text(encoding="utf-8") == "= Hi\n"
     assert (out / "logo.png").exists()
+
+
+def test_convert_node_uses_injected_llm():
+    from b2t.llm import FakeConverter
+    from b2t.nodes.convert import convert_node
+
+    state = _state(stripped_tex="\\section{X}")
+    update = convert_node(state, llm=FakeConverter("= Converted\n"))
+    assert update["typst_source"] == "= Converted\n"
