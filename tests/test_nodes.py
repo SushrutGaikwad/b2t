@@ -65,6 +65,17 @@ def test_write_output_node(deck_copy, tmp_path):
     assert (out / "logo.png").exists()
 
 
+def test_write_output_fixes_image_extension(deck_copy, tmp_path):
+    out = tmp_path / "out"
+    state = _state(
+        output_dir=out,
+        typst_source='#image("logo")\n',
+        image_files=[deck_copy / "logo.png"],
+    )
+    write_output(state)
+    assert (out / "main.typ").read_text(encoding="utf-8") == '#image("logo.png")\n'
+
+
 def test_convert_node_uses_injected_llm():
     from b2t.llm import FakeConverter
     from b2t.nodes.convert import convert_node
@@ -72,3 +83,17 @@ def test_convert_node_uses_injected_llm():
     state = _state(stripped_tex="\\section{X}")
     update = convert_node(state, llm=FakeConverter("= Converted\n"))
     assert update["typst_source"] == "= Converted\n"
+
+
+def test_convert_node_passes_math_guide():
+    from b2t.nodes.convert import convert_node
+
+    captured = {}
+
+    class Recorder:
+        def convert(self, latex_source, reference, guides=""):
+            captured["guides"] = guides
+            return "= ok\n"
+
+    convert_node(_state(stripped_tex="x"), llm=Recorder())
+    assert "Writing Math Equations in Typst" in captured["guides"]
