@@ -69,8 +69,8 @@ only for detected features. Do NOT paste them into this file.
 - files/reference/touying_reference_presentation.typ : the converter's primary
   reference. The converter consults this FIRST, before asking for any package
   docs.
-- files/md/accessibility/accessibility.md : Typst accessibility docs.
-- files/md/accessibility/ua-1_accessibility_rules.md : hand-written rules for
+- files/md/guides/accessibility.md : Typst accessibility docs.
+- files/md/guides/ua-1_accessibility_rules.md : hand-written rules for
   making a Touying deck UA-1 accessible (used by the tagging step).
 
 ## Stack & conventions
