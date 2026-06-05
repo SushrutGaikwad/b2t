@@ -1,4 +1,5 @@
 import tempfile
+import zipfile
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -47,6 +48,16 @@ def _reconstruct(files: list[UploadFile], root: Path) -> None:
         target = _safe_target(root, upload.filename or "")
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(upload.file.read())
+
+
+def _zip_dir(directory: Path) -> Path:
+    """Zip every file under directory into a fresh temp zip; return its path."""
+    zip_path = Path(tempfile.mkdtemp(prefix="b2t_download_")) / "deck.zip"
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as archive:
+        for path in sorted(directory.rglob("*")):
+            if path.is_file():
+                archive.write(path, path.relative_to(directory))
+    return zip_path
 
 
 def create_app(store: JobStore | None = None) -> FastAPI:
@@ -118,6 +129,16 @@ def create_app(store: JobStore | None = None) -> FastAPI:
                 job_id, status="compile_failed", pdf_path=None, error=result.error
             )
         return SaveResult(ok=result.ok, error=result.error)
+
+    @app.get("/api/jobs/{job_id}/download")
+    def download_job(job_id: str):
+        job = jobs.get(job_id)
+        if job is None or job.output_dir is None or not Path(job.output_dir).exists():
+            raise HTTPException(status_code=404, detail="no output to download")
+        zip_path = _zip_dir(Path(job.output_dir))
+        return FileResponse(
+            zip_path, media_type="application/zip", filename="deck.zip"
+        )
 
     app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
     return app

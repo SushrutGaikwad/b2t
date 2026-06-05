@@ -1,4 +1,6 @@
+import io
 import time
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -143,3 +145,20 @@ def test_save_broken_source_reports_compile_failed():
 def test_save_unknown_job_returns_404():
     res = _client().post("/api/jobs/does-not-exist/save", json={"source": "= x\n"})
     assert res.status_code == 404
+
+
+@pytest.mark.skipif(not typst_available(), reason="typst binary not installed")
+def test_download_returns_zip_with_typ_and_pdf():
+    client = _client()
+    job_id = _run_sample(client)
+    res = client.get(f"/api/jobs/{job_id}/download")
+    assert res.status_code == 200
+    assert res.headers["content-type"] == "application/zip"
+    names = zipfile.ZipFile(io.BytesIO(res.content)).namelist()
+    assert "main.typ" in names
+    assert "main.pdf" in names
+    assert "logo.png" in names
+
+
+def test_download_unknown_job_returns_404():
+    assert _client().get("/api/jobs/does-not-exist/download").status_code == 404
