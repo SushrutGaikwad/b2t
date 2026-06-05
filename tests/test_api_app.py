@@ -106,3 +106,40 @@ def test_serves_index_at_root():
     res = _client().get("/")
     assert res.status_code == 200
     assert 'id="app"' in res.text
+
+
+def _run_sample(client):
+    job_id = client.post("/api/jobs/sample", data={"use_fake": "true"}).json()["job_id"]
+    _wait_terminal(client, job_id)
+    return job_id
+
+
+@pytest.mark.skipif(not typst_available(), reason="typst binary not installed")
+def test_save_valid_source_recompiles():
+    client = _client()
+    job_id = _run_sample(client)
+    res = client.post(
+        f"/api/jobs/{job_id}/save", json={"source": "= Edited\n\nNew body.\n"}
+    )
+    assert res.status_code == 200
+    assert res.json()["ok"] is True
+    assert "Edited" in client.get(f"/api/jobs/{job_id}/typ").text
+    assert client.get(f"/api/jobs/{job_id}").json()["status"] == "succeeded"
+
+
+@pytest.mark.skipif(not typst_available(), reason="typst binary not installed")
+def test_save_broken_source_reports_compile_failed():
+    client = _client()
+    job_id = _run_sample(client)
+    res = client.post(
+        f"/api/jobs/{job_id}/save", json={"source": "#this_is_not_defined()\n"}
+    )
+    assert res.status_code == 200
+    assert res.json()["ok"] is False
+    assert res.json()["error"]
+    assert client.get(f"/api/jobs/{job_id}").json()["status"] == "compile_failed"
+
+
+def test_save_unknown_job_returns_404():
+    res = _client().post("/api/jobs/does-not-exist/save", json={"source": "= x\n"})
+    assert res.status_code == 404

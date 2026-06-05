@@ -22,6 +22,15 @@ class JobView(BaseModel):
     has_pdf: bool
 
 
+class SaveRequest(BaseModel):
+    source: str
+
+
+class SaveResult(BaseModel):
+    ok: bool
+    error: str | None
+
+
 def to_view(job: JobRecord) -> JobView:
     has_pdf = job.pdf_path is not None and Path(job.pdf_path).exists()
     return JobView(

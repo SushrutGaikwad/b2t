@@ -7,8 +7,15 @@ from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
 from b2t.api.jobs import EXECUTOR, JobStore, run_job
-from b2t.api.schemas import JobCreated, JobView, to_view
+from b2t.api.schemas import (
+    JobCreated,
+    JobView,
+    SaveRequest,
+    SaveResult,
+    to_view,
+)
 from b2t.config import REPO_ROOT
+from b2t.typst_runner import compile_typst
 from b2t.llm import ConverterLLM, FakeConverter, OpenAIConverter
 
 SAMPLE_DECK = REPO_ROOT / "tests" / "fixtures" / "sample_deck"
@@ -94,6 +101,23 @@ def create_app(store: JobStore | None = None) -> FastAPI:
         if job is None or job.pdf_path is None or not Path(job.pdf_path).exists():
             raise HTTPException(status_code=404, detail="no pdf output")
         return FileResponse(Path(job.pdf_path), media_type="application/pdf")
+
+    @app.post("/api/jobs/{job_id}/save", response_model=SaveResult)
+    def save_job(job_id: str, req: SaveRequest):
+        job = jobs.get(job_id)
+        if job is None or job.typst_path is None:
+            raise HTTPException(status_code=404, detail="no typst output to save")
+        Path(job.typst_path).write_text(req.source, encoding="utf-8")
+        result = compile_typst(Path(job.typst_path))
+        if result.ok:
+            jobs.update(
+                job_id, status="succeeded", pdf_path=result.pdf_path, error=None
+            )
+        else:
+            jobs.update(
+                job_id, status="compile_failed", pdf_path=None, error=result.error
+            )
+        return SaveResult(ok=result.ok, error=result.error)
 
     app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
     return app
