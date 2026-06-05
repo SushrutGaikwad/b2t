@@ -71,3 +71,18 @@ uv run python -c "from b2t.app import convert_deck; convert_deck('tests/fixtures
 
 Output is written to `out/` (`main.typ`, copied images, and `main.pdf` on
 success). Set `OPENAI_MODEL` to override the default model.
+
+## Run the testing UI
+
+A thin browser UI for converting a deck folder and inspecting the result.
+
+```bash
+uv run uvicorn b2t.api.app:app --reload
+```
+
+Open http://127.0.0.1:8000. Click "Use sample deck" for a one-click run, or
+pick a deck folder with the folder chooser. Tick "use fake converter (offline)"
+to exercise the pipeline without calling OpenAI. The page shows per-node
+progress, the generated `main.typ`, the compiled PDF, and any compile error.
+
+A real conversion needs `OPENAI_API_KEY` in `.env` and the `typst` CLI on PATH.
