@@ -125,6 +125,9 @@ def create_app(store: JobStore | None = None) -> FastAPI:
                 job_id, status="succeeded", pdf_path=result.pdf_path, error=None
             )
         else:
+            # Drop any stale PDF so a later download stays consistent with the
+            # broken source (typst leaves the previous PDF in place on failure).
+            Path(job.typst_path).with_suffix(".pdf").unlink(missing_ok=True)
             jobs.update(
                 job_id, status="compile_failed", pdf_path=None, error=result.error
             )

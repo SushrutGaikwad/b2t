@@ -164,6 +164,19 @@ def test_download_unknown_job_returns_404():
     assert _client().get("/api/jobs/does-not-exist/download").status_code == 404
 
 
+@pytest.mark.skipif(not typst_available(), reason="typst binary not installed")
+def test_download_excludes_stale_pdf_after_failed_save():
+    client = _client()
+    job_id = _run_sample(client)  # sample compiles, so main.pdf exists
+    res = client.post(f"/api/jobs/{job_id}/save", json={"source": "#nope_undefined()\n"})
+    assert res.json()["ok"] is False
+    names = zipfile.ZipFile(
+        io.BytesIO(client.get(f"/api/jobs/{job_id}/download").content)
+    ).namelist()
+    assert "main.typ" in names
+    assert "main.pdf" not in names
+
+
 def test_index_has_editor_and_buttons():
     text = _client().get("/").text
     assert 'id="typ"' in text
