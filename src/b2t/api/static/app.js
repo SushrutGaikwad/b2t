@@ -53,7 +53,7 @@ async function loadGraph() {
   }
   if (!window.mermaid) return;
   try {
-    window.mermaid.initialize({ startOnLoad: false, securityLevel: "loose", theme: "dark" });
+    window.mermaid.initialize({ startOnLoad: false, securityLevel: "loose", theme: "default" });
     const { svg } = await window.mermaid.render("pipelineGraph", def);
     $("graph").innerHTML = svg;
     const map = {};
