@@ -61,6 +61,7 @@ async function loadGraph() {
       map[g.textContent.trim()] = g;
     });
     graphNodes = map;
+    highlightGraph(null, "idle");
   } catch (e) {
     graphNodes = null;
   }
@@ -76,9 +77,10 @@ function highlightGraph(currentNode, status) {
   NODES.forEach((name, i) => {
     const g = graphNodes[name];
     if (!g) return;
-    g.classList.remove("done", "active");
+    g.classList.remove("done", "active", "pending");
     if (allDone || (idx >= 0 && i < idx)) g.classList.add("done");
     else if (idx === i) g.classList.add(status === "running" ? "active" : "done");
+    else g.classList.add("pending");
   });
 }
 
