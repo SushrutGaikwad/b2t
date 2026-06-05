@@ -4,6 +4,9 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from b2t.graph import build_graph
+from b2t.llm import ConverterLLM
+
 PIPELINE_NODES = (
     "copy_input",
     "clean_build",
@@ -56,3 +59,41 @@ class JobStore:
             job = self._jobs[job_id]
             for key, value in changes.items():
                 setattr(job, key, value)
+
+
+def run_job(
+    store: JobStore,
+    job_id: str,
+    input_dir: Path,
+    output_dir: Path,
+    converter: ConverterLLM,
+) -> None:
+    """Run the conversion graph, updating the job record as each node completes."""
+    graph = build_graph(converter)
+    seed = {"input_dir": input_dir, "output_dir": output_dir}
+    state = dict(seed)
+    store.update(job_id, status="running")
+    try:
+        for chunk in graph.stream(seed, stream_mode="updates"):
+            for node, update in chunk.items():
+                state.update(update)
+                store.update(job_id, current_node=node)
+    except Exception as exc:
+        store.update(job_id, status="failed", error=str(exc))
+        return
+
+    main_tex = state.get("main_tex")
+    store.update(
+        job_id,
+        main_tex=main_tex.name if main_tex else None,
+        included_tex=[p.name for p in state.get("included_tex", [])],
+        images=[p.name for p in state.get("image_files", [])],
+        has_typst=state.get("typst_source") is not None,
+        typst_path=state.get("typst_path"),
+    )
+    if state.get("compiled"):
+        store.update(job_id, status="succeeded", pdf_path=state.get("pdf_path"))
+    else:
+        store.update(
+            job_id, status="compile_failed", error=state.get("compile_error")
+        )
