@@ -17,7 +17,6 @@ iframe { width: 100%; height: 480px; border: 1px solid #e3dbe8; border-radius: 6
 #graph svg { max-width: 100%; height: auto; }
 #graph .node.done rect, #graph .node.done polygon, #graph .node.done path { fill: #bfe9c6 !important; }
 #graph .node.active rect, #graph .node.active polygon, #graph .node.active path { fill: #ffe9b3 !important; }
-#graph .node.pending rect, #graph .node.pending polygon, #graph .node.pending path { fill: #ececf2 !important; }
-#graph .node.pending { opacity: 0.5; }
+#graph .node.pending rect, #graph .node.pending polygon, #graph .node.pending path { fill: #e6e1ef !important; }
 #graph .node.active { animation: b2t-pulse 1.2s ease-in-out infinite; }
 @keyframes b2t-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
