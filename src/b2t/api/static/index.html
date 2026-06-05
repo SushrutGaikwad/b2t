@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>b2t testing UI</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main id="app">
+    <h1>b2t: Beamer to Touying</h1>
+
+    <section class="submit">
+      <label>
+        Deck folder:
+        <input type="file" id="folder" webkitdirectory directory multiple />
+      </label>
+      <div class="options">
+        <label><input type="checkbox" id="use-fake" /> use fake converter (offline)</label>
+        <label>model override: <input type="text" id="model" placeholder="(default)" /></label>
+      </div>
+      <div class="actions">
+        <button id="run">Convert folder</button>
+        <button id="run-sample" type="button">Use sample deck</button>
+      </div>
+    </section>
+
+    <section class="status">
+      <span id="badge" class="badge">idle</span>
+      <ul id="nodes"></ul>
+    </section>
+
+    <section class="output">
+      <h2>Generated main.typ</h2>
+      <pre id="typ">(nothing yet)</pre>
+      <h2>Compiled PDF</h2>
+      <iframe id="pdf" title="compiled pdf"></iframe>
+      <h2>Compile error</h2>
+      <pre id="error">(none)</pre>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>
