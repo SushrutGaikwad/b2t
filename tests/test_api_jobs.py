@@ -62,3 +62,19 @@ def test_pipeline_nodes_are_the_eight_in_order():
         "write_output",
         "compile",
     )
+
+
+def test_current_node_tracks_the_running_node(tmp_path):
+    # current_node must name the node that is RUNNING, not the last finished one.
+    # The converter spy reads current_node at the moment the convert node runs it.
+    store = JobStore()
+    job = store.create(input_dir=SAMPLE_DECK, output_dir=tmp_path / "out")
+    captured = {}
+
+    class SpyConverter:
+        def convert(self, latex_source, reference, guides=""):
+            captured["during_convert"] = store.get(job.id).current_node
+            return "= Hi\n"
+
+    run_job(store, job.id, SAMPLE_DECK, tmp_path / "out", SpyConverter())
+    assert captured["during_convert"] == "convert"

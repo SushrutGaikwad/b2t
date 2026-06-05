@@ -68,16 +68,24 @@ def run_job(
     output_dir: Path,
     converter: ConverterLLM,
 ) -> None:
-    """Run the conversion graph, updating the job record as each node completes."""
+    """Run the conversion graph, updating the job record as each node runs.
+
+    current_node is driven by debug "task" events, which fire when a node is
+    about to run, so the record names the node that is actually running (not the
+    last one that finished). Final state is accumulated from the "updates".
+    """
     graph = build_graph(converter)
     seed = {"input_dir": input_dir, "output_dir": output_dir}
     state = dict(seed)
     store.update(job_id, status="running")
     try:
-        for chunk in graph.stream(seed, stream_mode="updates"):
-            for node, update in chunk.items():
-                state.update(update)
-                store.update(job_id, current_node=node)
+        for mode, chunk in graph.stream(seed, stream_mode=["updates", "debug"]):
+            if mode == "debug":
+                if chunk.get("type") == "task":
+                    store.update(job_id, current_node=chunk["payload"]["name"])
+            else:
+                for update in chunk.values():
+                    state.update(update)
     except Exception as exc:
         store.update(job_id, status="failed", error=str(exc))
         return
