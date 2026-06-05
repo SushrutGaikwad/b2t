@@ -41,8 +41,10 @@ eventual SaaS wrapper.
 2. Async job model. POST starts a background run and returns a `job_id`; the
    page polls for status. Chosen over a synchronous endpoint so per-node
    progress and a future HITL pause have a place to live.
-3. Input is a zip upload, plus a convenience endpoint to run the bundled sample
-   deck with no upload.
+3. Input is a directory chosen with a browser folder picker
+   (`<input type="file" webkitdirectory>`). The folder's loose files are sent as
+   multipart (no zip) and reassembled into a temp directory server-side, plus a
+   convenience endpoint to run the bundled sample deck with no upload.
 4. The pipeline runs unchanged. The runner uses `graph.stream(...)` for
    progress; nodes are not modified.
 5. The converter is selectable per request (real `OpenAIConverter` or offline
@@ -100,9 +102,12 @@ read.
 
 ## Execution flow
 
-1. `POST /api/jobs` receives a zip. The handler unzips into a fresh temp
-   directory (the deck root), creates a `JobRecord` (`queued`), schedules the
-   background run, and returns `{job_id, status}`.
+1. `POST /api/jobs` receives the picked folder's files as multipart, each
+   carrying its relative path (`webkitRelativePath`). The handler rebuilds the
+   directory tree under a fresh temp directory (the deck root), creating
+   subdirectories as needed so `\input` and `\includegraphics` targets resolve,
+   creates a `JobRecord` (`queued`), schedules the background run, and returns
+   `{job_id, status}`.
 2. The background runner builds the graph with the chosen converter, then
    iterates `graph.stream({input_dir, output_dir})`. After each yielded step it
    sets `current_node` and `status=running`. A deterministic raise is caught and
@@ -124,7 +129,7 @@ runner against the bundled fixture path.
 
 | Method | Route | Purpose |
 |--------|-------|---------|
-| POST | `/api/jobs` | Upload a deck zip (multipart); start a run; return `{job_id, status}` |
+| POST | `/api/jobs` | Upload the picked folder's files (multipart, `webkitdirectory`); start a run; return `{job_id, status}` |
 | POST | `/api/jobs/sample` | Run the bundled `tests/fixtures/sample_deck` with no upload |
 | GET | `/api/jobs/{id}` | Poll status, `current_node`, error, and a small state view |
 | GET | `/api/jobs/{id}/typ` | The generated `main.typ` text |
@@ -132,7 +137,8 @@ runner against the bundled fixture path.
 
 `POST /api/jobs` request fields (multipart form):
 
-- `deck`: the zip file
+- `files`: the folder's files, each part's filename carrying its relative path
+  (for example `sample_deck/main.tex`, `sample_deck/img/logo.png`)
 - `use_fake`: bool (default false)
 - `model`: optional string, overrides `OPENAI_MODEL` when the real converter is
   used
@@ -146,8 +152,9 @@ names, image names, whether `typst_source` is present).
 A single `index.html` with three regions, driven by `app.js` using `fetch` and
 a roughly one-second poll:
 
-1. Submit: a zip file input, a "use sample deck" button, a "use fake converter
-   (offline)" checkbox, and an optional model field.
+1. Submit: a folder input (`<input type="file" webkitdirectory>`) with a Browse
+   button, a "use sample deck" button, a "use fake converter (offline)"
+   checkbox, and an optional model field.
 2. Status: a fixed checklist of the eight nodes (`copy_input`, `clean_build`,
    `detect_main`, `flatten`, `strip_overlays`, `convert`, `write_output`,
    `compile`) that fill in as `current_node` advances, plus an overall status
@@ -166,15 +173,17 @@ frontend needs no graph-introspection endpoint.
   message. They never crash the server.
 - Compile failure is a normal terminal outcome (`compile_failed`), not an
   exception.
-- Bad uploads (not a zip, empty archive) return 400 from the POST handler.
+- Bad uploads (no files submitted) return 400 from the POST handler. A folder
+  with no Beamer main `.tex` is a deterministic pipeline failure surfaced as
+  `status=failed`, not a 400.
 - Unknown job id returns 404.
 
 ## Testing approach
 
 - API tests use FastAPI `TestClient` and the `FakeConverter` path, fully
   offline:
-  - `POST /api/jobs/sample` (or a small in-repo zip) reaches a terminal status
-    and exposes `main.typ`.
+  - `POST /api/jobs/sample` (or a multipart post of the fixture deck's files)
+    reaches a terminal status and exposes `main.typ`.
   - Unknown job id returns 404.
   - A deliberately broken deck reaches `status=failed` with a message.
 - typst-dependent assertions (status reaching `succeeded`, the `pdf` endpoint
@@ -189,5 +198,5 @@ frontend needs no graph-introspection endpoint.
   checkpointer.
 - Streaming: polling can later be replaced by SSE or websockets without changing
   the job model.
-- SaaS: the zip upload path and temp-directory isolation are the starting points
-  for roadmap item 7 hardening.
+- SaaS: the folder upload path and temp-directory isolation are the starting
+  points for roadmap item 7 hardening.
