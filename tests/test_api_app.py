@@ -183,3 +183,12 @@ def test_index_has_editor_and_buttons():
     assert 'id="save"' in text
     assert 'id="download"' in text
     assert "codemirror" in text.lower()
+
+
+def test_models_endpoint_lists_config_models():
+    from b2t.config import DEFAULT_OPENAI_MODEL, OPENAI_MODELS
+
+    body = _client().get("/api/models").json()
+    assert body["models"] == list(OPENAI_MODELS)
+    assert body["default"] == DEFAULT_OPENAI_MODEL
+    assert body["default"] in body["models"]

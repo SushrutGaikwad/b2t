@@ -11,11 +11,12 @@ from b2t.api.jobs import EXECUTOR, JobStore, run_job
 from b2t.api.schemas import (
     JobCreated,
     JobView,
+    ModelsView,
     SaveRequest,
     SaveResult,
     to_view,
 )
-from b2t.config import REPO_ROOT
+from b2t.config import DEFAULT_OPENAI_MODEL, OPENAI_MODELS, REPO_ROOT
 from b2t.typst_runner import compile_typst
 from b2t.llm import ConverterLLM, FakeConverter, OpenAIConverter
 
@@ -142,6 +143,10 @@ def create_app(store: JobStore | None = None) -> FastAPI:
         return FileResponse(
             zip_path, media_type="application/zip", filename="deck.zip"
         )
+
+    @app.get("/api/models", response_model=ModelsView)
+    def get_models():
+        return ModelsView(models=list(OPENAI_MODELS), default=DEFAULT_OPENAI_MODEL)
 
     app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
     return app

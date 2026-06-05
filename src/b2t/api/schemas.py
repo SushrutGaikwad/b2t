@@ -31,6 +31,11 @@ class SaveResult(BaseModel):
     error: str | None
 
 
+class ModelsView(BaseModel):
+    models: list[str]
+    default: str
+
+
 def to_view(job: JobRecord) -> JobView:
     has_pdf = job.pdf_path is not None and Path(job.pdf_path).exists()
     return JobView(
