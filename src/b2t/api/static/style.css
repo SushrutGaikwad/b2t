@@ -17,3 +17,7 @@ pre { background: #1e1e26; color: #eee; padding: 0.8rem; border-radius: 6px; ove
 iframe { width: 100%; height: 480px; border: 1px solid #e3dbe8; border-radius: 6px; background: #fff; }
 #typ { width: 100%; min-height: 200px; box-sizing: border-box; }
 .CodeMirror { height: 340px; border: 1px solid #e3dbe8; border-radius: 6px; }
+#graph { margin-top: 0.8rem; text-align: center; min-height: 1.2rem; }
+#graph svg { max-width: 100%; height: auto; }
+#graph .node.done rect, #graph .node.done polygon, #graph .node.done path { fill: #bfe9c6 !important; }
+#graph .node.active rect, #graph .node.active polygon, #graph .node.active path { fill: #ffe9b3 !important; }

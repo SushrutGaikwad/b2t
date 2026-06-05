@@ -205,3 +205,10 @@ def test_graph_endpoint_returns_mermaid():
     assert "graph" in body["mermaid"].lower()
     for name in ("copy_input", "convert", "compile"):
         assert name in body["mermaid"]
+
+
+def test_index_has_graph_container():
+    text = _client().get("/").text
+    assert '<div id="graph"' in text
+    assert "mermaid" in text.lower()
+    assert '<ul id="nodes"' not in text

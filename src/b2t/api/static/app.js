@@ -8,6 +8,7 @@ const $ = (id) => document.getElementById(id);
 
 let currentJobId = null;
 let editor = null;
+let graphNodes = null;
 
 if (window.CodeMirror) {
   CodeMirror.defineSimpleMode("typst", {
@@ -43,17 +44,41 @@ function setSource(text) {
   else $("typ").value = text;
 }
 
-function renderNodes(currentNode, status) {
-  const list = $("nodes");
-  list.innerHTML = "";
+async function loadGraph() {
+  let def;
+  try {
+    def = (await (await fetch("/api/graph")).json()).mermaid;
+  } catch (e) {
+    return;  // leave graphNodes null; highlightGraph uses the text fallback
+  }
+  if (!window.mermaid) return;
+  try {
+    window.mermaid.initialize({ startOnLoad: false, securityLevel: "loose", theme: "dark" });
+    const { svg } = await window.mermaid.render("pipelineGraph", def);
+    $("graph").innerHTML = svg;
+    const map = {};
+    $("graph").querySelectorAll("g.node").forEach((g) => {
+      map[g.textContent.trim()] = g;
+    });
+    graphNodes = map;
+  } catch (e) {
+    graphNodes = null;
+  }
+}
+
+function highlightGraph(currentNode, status) {
+  if (!graphNodes) {
+    $("graph").textContent = currentNode ? `Stage: ${currentNode} (${status})` : "";
+    return;
+  }
   const idx = NODES.indexOf(currentNode);
   const allDone = status === "succeeded";
   NODES.forEach((name, i) => {
-    const li = document.createElement("li");
-    li.textContent = name;
-    if (allDone || (idx >= 0 && i < idx)) li.classList.add("done");
-    else if (idx === i) li.classList.add(status === "running" ? "active" : "done");
-    list.appendChild(li);
+    const g = graphNodes[name];
+    if (!g) return;
+    g.classList.remove("done", "active");
+    if (allDone || (idx >= 0 && i < idx)) g.classList.add("done");
+    else if (idx === i) g.classList.add(status === "running" ? "active" : "done");
   });
 }
 
@@ -87,7 +112,7 @@ async function poll(id) {
   const res = await fetch(`/api/jobs/${id}`);
   const job = await res.json();
   setBadge(job.status);
-  renderNodes(job.current_node, job.status);
+  highlightGraph(job.current_node, job.status);
   if (TERMINAL.includes(job.status)) finish(id, job);
   else setTimeout(() => poll(id), 1000);
 }
@@ -158,3 +183,4 @@ $("download").addEventListener("click", () => {
 });
 
 loadModels();
+document.addEventListener("mermaid-ready", loadGraph);
