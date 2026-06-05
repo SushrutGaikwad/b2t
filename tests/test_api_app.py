@@ -1,13 +1,34 @@
 import time
 from pathlib import Path
 
+import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
-from b2t.api.app import create_app
+from b2t.api.app import _safe_target, create_app
 from b2t.typst_runner import typst_available
 
 SAMPLE_DECK = Path(__file__).parent / "fixtures" / "sample_deck"
 TERMINAL = {"succeeded", "compile_failed", "failed"}
+
+
+def test_safe_target_allows_nested_paths(tmp_path):
+    root = (tmp_path / "deck").resolve()
+    assert _safe_target(root, "sub/main.tex") == root / "sub" / "main.tex"
+
+
+def test_safe_target_rejects_parent_escape(tmp_path):
+    root = (tmp_path / "deck").resolve()
+    with pytest.raises(HTTPException):
+        _safe_target(root, "../evil.txt")
+
+
+def test_safe_target_rejects_sibling_prefix_escape(tmp_path):
+    # root is .../deck; a sibling .../deck_evil shares the string prefix but is
+    # outside root. The old startswith check let this through; is_relative_to does not.
+    root = (tmp_path / "deck").resolve()
+    with pytest.raises(HTTPException):
+        _safe_target(root, "../deck_evil/x.txt")
 
 
 def _client():

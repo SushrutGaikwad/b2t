@@ -25,14 +25,19 @@ def _make_converter(use_fake: bool, model: str) -> ConverterLLM:
     return OpenAIConverter(model=model or None)
 
 
+def _safe_target(root: Path, rel: str) -> Path:
+    """Resolve rel under root, rejecting any path that escapes root."""
+    target = (root / rel).resolve()
+    if not target.is_relative_to(root):
+        raise HTTPException(status_code=400, detail="invalid path in upload")
+    return target
+
+
 def _reconstruct(files: list[UploadFile], root: Path) -> None:
     """Write each uploaded file under root at its relative path. Reject escapes."""
     root = root.resolve()
     for upload in files:
-        rel = upload.filename or ""
-        target = (root / rel).resolve()
-        if not str(target).startswith(str(root)):
-            raise HTTPException(status_code=400, detail="invalid path in upload")
+        target = _safe_target(root, upload.filename or "")
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(upload.file.read())
 
