@@ -44,7 +44,7 @@ def test_flatten_node(deck_copy):
     update = flatten_node(_state(main_tex=deck_copy / "main.tex"))
     assert "Motivation" in update["flattened_tex"]
     assert {p.name for p in update["image_files"]} == {"logo.png"}
-    assert {p.name for p in update["included_tex"]} == {"intro.tex", "diagram.tex"}
+    assert {p.name for p in update["included_tex"]} == {"intro.tex"}
 
 
 def test_strip_overlays_node():

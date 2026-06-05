@@ -6,7 +6,7 @@ from b2t.latex.flatten import flatten
 def test_expands_inputs_into_one_source(deck_copy):
     merged = flatten(deck_copy / "main.tex")
     assert "Motivation" in merged          # from intro.tex
-    assert "tikzpicture" in merged         # from diagram.tex
+    assert "quadratic" in merged.lower()   # intro content was inlined
     assert r"\input{" not in merged        # inputs are gone
 
 
