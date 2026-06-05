@@ -2,6 +2,17 @@
 
 Converts compiled LaTeX Beamer decks into accessible Typst Touying PDFs.
 
+## Contents
+
+- [Architecture (v0)](#architecture-v0)
+  - [Nodes](#nodes)
+- [Getting started](#getting-started)
+  - [Requirements](#requirements)
+  - [Setup](#setup)
+  - [Verify](#verify)
+- [Run (v0)](#run-v0)
+- [Run the testing UI](#run-the-testing-ui)
+
 ## Architecture (v0)
 
 The pipeline is a linear LangGraph `StateGraph` over a single Pydantic
@@ -53,24 +64,54 @@ deterministic.
    the result (PDF path on success, error text on failure). v0 records the
    error but does not yet retry.
 
-## Develop
+## Getting started
+
+### Requirements
+
+- [uv](https://docs.astral.sh/uv/getting-started/installation/): manages
+  Python and all dependencies. Python 3.12 is fetched automatically if needed.
+- [Typst CLI](https://github.com/typst/typst#installation) 0.14+ on PATH
+  (`winget install Typst.Typst`, `brew install typst`, or
+  `cargo install typst-cli`). Verify with `typst --version`.
+- An OpenAI API key, for real conversions. The pipeline runs offline with the
+  fake converter (tests and the UI checkbox), but actual Beamer to Typst
+  translation calls OpenAI.
+
+No LaTeX installation is needed; input decks are already compiled.
+
+### Setup
+
+```bash
+git clone https://github.com/SushrutGaikwad/b2t.git
+cd b2t
+uv sync
+```
+
+Create a `.env` file in the repo root:
+
+```
+OPENAI_API_KEY=sk-...
+```
+
+Optionally add `OPENAI_MODEL=...` to override the default model.
+
+### Verify
 
 ```bash
 uv run pytest
 ```
 
-Typst integration tests are skipped unless the `typst` CLI is installed.
+All tests should pass. Typst integration tests are skipped unless the `typst`
+CLI is installed.
 
 ## Run (v0)
-
-Requires `OPENAI_API_KEY` in `.env` and the `typst` CLI on PATH.
 
 ```bash
 uv run python -c "from b2t.app import convert_deck; convert_deck('tests/fixtures/sample_deck', 'out')"
 ```
 
 Output is written to `out/` (`main.typ`, copied images, and `main.pdf` on
-success). Set `OPENAI_MODEL` to override the default model.
+success).
 
 ## Run the testing UI
 
@@ -84,5 +125,3 @@ Open http://127.0.0.1:8000. Click "Use sample deck" for a one-click run, or
 pick a deck folder with the folder chooser. Tick "use fake converter (offline)"
 to exercise the pipeline without calling OpenAI. The page shows per-node
 progress, the generated `main.typ`, the compiled PDF, and any compile error.
-
-A real conversion needs `OPENAI_API_KEY` in `.env` and the `typst` CLI on PATH.

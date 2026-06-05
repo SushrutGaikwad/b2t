@@ -15,6 +15,9 @@ wheels/
 # Conversion output
 out/
 
+# Reading
+CODEBASE_GUIDE.md
+
 # LaTeX build artifacts (from github/gitignore TeX.gitignore)
 ## Core latex/pdflatex auxiliary files
 *.aux
