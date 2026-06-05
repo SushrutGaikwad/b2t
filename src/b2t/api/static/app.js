@@ -6,6 +6,43 @@ const TERMINAL = ["succeeded", "compile_failed", "failed"];
 
 const $ = (id) => document.getElementById(id);
 
+let currentJobId = null;
+let editor = null;
+
+if (window.CodeMirror) {
+  CodeMirror.defineSimpleMode("typst", {
+    start: [
+      { regex: /\/\/.*/, token: "comment" },
+      { regex: /\/\*/, token: "comment", next: "comment" },
+      { regex: /"(?:[^\\"]|\\.)*"/, token: "string" },
+      { regex: /\$[^$]*\$/, token: "string-2" },
+      { regex: /^\s*=+.*/, token: "header" },
+      { regex: /#(?:let|set|show|import|include)\b/, token: "keyword" },
+      { regex: /#[A-Za-z_][\w.-]*/, token: "variable-2" },
+    ],
+    comment: [
+      { regex: /.*?\*\//, token: "comment", next: "start" },
+      { regex: /.*/, token: "comment" },
+    ],
+    meta: { lineComment: "//" },
+  });
+  editor = CodeMirror.fromTextArea($("typ"), {
+    mode: "typst",
+    theme: "material-darker",
+    lineNumbers: true,
+    lineWrapping: true,
+  });
+}
+
+function getSource() {
+  return editor ? editor.getValue() : $("typ").value;
+}
+
+function setSource(text) {
+  if (editor) editor.setValue(text);
+  else $("typ").value = text;
+}
+
 function renderNodes(currentNode, status) {
   const list = $("nodes");
   list.innerHTML = "";
@@ -31,12 +68,19 @@ function setBusy(busy) {
   $("run-sample").disabled = busy;
 }
 
+function refreshPdf(id, hasPdf) {
+  $("pdf").src = hasPdf ? `/api/jobs/${id}/pdf?t=${Date.now()}` : "about:blank";
+}
+
 async function finish(id, job) {
   setBusy(false);
+  currentJobId = id;
   const typ = await fetch(`/api/jobs/${id}/typ`);
-  $("typ").textContent = typ.ok ? await typ.text() : "(no typst output)";
-  $("pdf").src = job.has_pdf ? `/api/jobs/${id}/pdf` : "about:blank";
+  setSource(typ.ok ? await typ.text() : "");
+  refreshPdf(id, job.has_pdf);
   $("error").textContent = job.error || "(none)";
+  $("save").disabled = false;
+  $("download").disabled = false;
 }
 
 async function poll(id) {
@@ -56,7 +100,9 @@ function commonFields(fd) {
 
 async function start(url, fd) {
   setBusy(true);
-  $("typ").textContent = "(running)";
+  $("save").disabled = true;
+  $("download").disabled = true;
+  setSource("");
   $("error").textContent = "(none)";
   $("pdf").src = "about:blank";
   const res = await fetch(url, { method: "POST", body: fd });
@@ -74,4 +120,22 @@ $("run").addEventListener("click", () => {
 
 $("run-sample").addEventListener("click", () => {
   start("/api/jobs/sample", commonFields(new FormData()));
+});
+
+$("save").addEventListener("click", async () => {
+  if (!currentJobId) return;
+  $("error").textContent = "(saving...)";
+  const res = await fetch(`/api/jobs/${currentJobId}/save`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ source: getSource() }),
+  });
+  const data = await res.json();
+  $("error").textContent = data.error || "(none)";
+  refreshPdf(currentJobId, data.ok);
+});
+
+$("download").addEventListener("click", () => {
+  if (!currentJobId) return;
+  window.location = `/api/jobs/${currentJobId}/download`;
 });

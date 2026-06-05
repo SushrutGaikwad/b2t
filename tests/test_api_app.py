@@ -162,3 +162,11 @@ def test_download_returns_zip_with_typ_and_pdf():
 
 def test_download_unknown_job_returns_404():
     assert _client().get("/api/jobs/does-not-exist/download").status_code == 404
+
+
+def test_index_has_editor_and_buttons():
+    text = _client().get("/").text
+    assert 'id="typ"' in text
+    assert 'id="save"' in text
+    assert 'id="download"' in text
+    assert "codemirror" in text.lower()

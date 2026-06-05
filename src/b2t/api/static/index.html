@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>b2t testing UI</title>
   <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css" />
 </head>
 <body>
   <main id="app">
@@ -32,13 +34,19 @@
 
     <section class="output">
       <h2>Generated main.typ</h2>
-      <pre id="typ">(nothing yet)</pre>
+      <textarea id="typ"></textarea>
+      <div class="actions">
+        <button id="save" type="button" disabled>Save and compile</button>
+        <button id="download" type="button" disabled>Download</button>
+      </div>
       <h2>Compiled PDF</h2>
       <iframe id="pdf" title="compiled pdf"></iframe>
       <h2>Compile error</h2>
       <pre id="error">(none)</pre>
     </section>
   </main>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/mode/simple.min.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>
