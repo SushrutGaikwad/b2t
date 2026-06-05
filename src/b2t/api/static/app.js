@@ -98,6 +98,23 @@ function commonFields(fd) {
   return fd;
 }
 
+async function loadModels() {
+  const sel = $("model");
+  sel.innerHTML = '<option value="">(default)</option>';
+  try {
+    const res = await fetch("/api/models");
+    const data = await res.json();
+    for (const id of data.models) {
+      const opt = document.createElement("option");
+      opt.value = id;
+      opt.textContent = id === data.default ? `${id} (default)` : id;
+      sel.appendChild(opt);
+    }
+  } catch (e) {
+    // leave only the (default) option if the list cannot be fetched
+  }
+}
+
 async function start(url, fd) {
   setBusy(true);
   $("save").disabled = true;
@@ -139,3 +156,5 @@ $("download").addEventListener("click", () => {
   if (!currentJobId) return;
   window.location = `/api/jobs/${currentJobId}/download`;
 });
+
+loadModels();

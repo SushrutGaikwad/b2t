@@ -192,3 +192,9 @@ def test_models_endpoint_lists_config_models():
     assert body["models"] == list(OPENAI_MODELS)
     assert body["default"] == DEFAULT_OPENAI_MODEL
     assert body["default"] in body["models"]
+
+
+def test_index_has_model_select():
+    text = _client().get("/").text
+    assert '<select id="model"' in text
+    assert 'type="text" id="model"' not in text
