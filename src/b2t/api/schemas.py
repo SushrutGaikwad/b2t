@@ -36,6 +36,10 @@ class ModelsView(BaseModel):
     default: str
 
 
+class GraphView(BaseModel):
+    mermaid: str
+
+
 def to_view(job: JobRecord) -> JobView:
     has_pdf = job.pdf_path is not None and Path(job.pdf_path).exists()
     return JobView(

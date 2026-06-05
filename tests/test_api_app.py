@@ -198,3 +198,10 @@ def test_index_has_model_select():
     text = _client().get("/").text
     assert '<select id="model"' in text
     assert 'type="text" id="model"' not in text
+
+
+def test_graph_endpoint_returns_mermaid():
+    body = _client().get("/api/graph").json()
+    assert "graph" in body["mermaid"].lower()
+    for name in ("copy_input", "convert", "compile"):
+        assert name in body["mermaid"]
