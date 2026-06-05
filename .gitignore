@@ -14,3 +14,66 @@ wheels/
 
 # Conversion output
 out/
+
+# LaTeX build artifacts (from github/gitignore TeX.gitignore)
+## Core latex/pdflatex auxiliary files
+*.aux
+*.lof
+*.log
+*.lot
+*.fls
+*.out
+*.toc
+*.fmt
+*.fot
+*.cb
+*.cb2
+## Intermediate documents
+*.dvi
+*.xdv
+*-converted-to.*
+*.pdf
+## Bibliography auxiliary files
+*.bbl
+*.bcf
+*.blg
+*-blx.aux
+*-blx.bib
+*.run.xml
+## Build tool auxiliary files
+*.fdb_latexmk
+*.synctex
+*.synctex(busy)
+*.synctex.gz
+*.synctex.gz(busy)
+*.pdfsync
+## Beamer and package-specific files
+*.nav
+*.pre
+*.snm
+*.vrb
+*.soc
+*.loa
+*.thm
+*.cpt
+*.spl
+*.lox
+## Makeindex
+*.idx
+*.ilg
+*.ind
+*.ist
+## Glossaries
+*.acn
+*.acr
+*.glg
+*.glo
+*.gls
+*.glsdefs
+*.slg
+*.slo
+*.sls
+## Editor and temporary files
+*.bak
+*.sav
+*.swp

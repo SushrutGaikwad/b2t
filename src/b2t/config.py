@@ -17,14 +17,57 @@ OPENAI_MODELS = (
 )
 
 BUILD_FILE_EXTENSIONS = (
+    # core latex / pdflatex auxiliary
     ".aux",
+    ".lof",
     ".log",
-    ".out",
+    ".lot",
     ".fls",
+    ".out",
+    ".toc",
+    ".fmt",
+    ".fot",
+    ".cb",
+    ".cb2",
+    # intermediate documents
+    ".dvi",
+    ".xdv",
+    # bibliography
+    ".bbl",
+    ".bcf",
+    ".blg",
+    ".run.xml",
+    # build tools
     ".fdb_latexmk",
+    ".synctex",
+    ".synctex.gz",
+    ".pdfsync",
+    # beamer and package
     ".nav",
     ".snm",
-    ".toc",
     ".vrb",
-    ".synctex.gz",
+    ".pre",
+    ".soc",
+    ".loa",
+    ".thm",
+    ".cpt",
+    ".spl",
+    ".lox",
+    # makeindex
+    ".idx",
+    ".ilg",
+    ".ind",
+    ".ist",
+    # glossaries
+    ".acn",
+    ".acr",
+    ".glg",
+    ".glo",
+    ".gls",
+    ".glsdefs",
+    ".slg",
+    ".slo",
+    ".sls",
+    # xindy
+    ".xdy",
 )
