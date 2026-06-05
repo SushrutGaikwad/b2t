@@ -278,7 +278,7 @@ Oxidation number support: #ce("|Mn,+II|")
 == Example Figure
 
 #figure(
-  image("graphics/example_image.png", width: 50%),
+  image("<path_to_image_with_image_extension>", width: 50%),
   caption: [Example Figure],
 ) <fig:example_figure_a>
 
@@ -287,9 +287,9 @@ Cross reference to @fig:example_figure_a.
 == Subfigures
 
 #subpar.grid(
-  figure(image("graphics/example_image.png", width: 100%), caption: [Subcaption A]), <fig:sub_a>,
-  figure(image("graphics/example_image.png", width: 100%), caption: [Subcaption B]), <fig:sub_b>,
-  figure(image("graphics/example_image.png", width: 100%), caption: [Subcaption C]), <fig:sub_c>,
+  figure(image("<path_to_image_with_image_extension>", width: 100%), caption: [Subcaption A]), <fig:sub_a>,
+  figure(image("<path_to_image_with_image_extension>", width: 100%), caption: [Subcaption B]), <fig:sub_b>,
+  figure(image("<path_to_image_with_image_extension>", width: 100%), caption: [Subcaption C]), <fig:sub_c>,
   columns: (1fr, 1fr, 1fr),
   caption: [A figure with three subfigures.],
   label: <fig:subfigures_example>,
@@ -701,7 +701,7 @@ def binary_search(a, x):
 
 #slide(composer: (1fr, 1fr))[
   #align(center)[
-    #image("graphics/example_image.png", width: 80%)
+    #image("<path_to_image_with_image_extension>", width: 80%)
   ]
 ][
   #list(
