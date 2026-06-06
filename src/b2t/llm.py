@@ -3,7 +3,7 @@ from typing import Protocol, runtime_checkable
 
 from openai import OpenAI
 
-from b2t.config import DEFAULT_MODEL, DEFAULT_OPENAI_MODEL, OPENROUTER_BASE_URL
+from b2t.config import DEFAULT_MODEL, OPENROUTER_BASE_URL
 
 _INSTRUCTIONS = (
     "You convert LaTeX Beamer source into a Typst Touying presentation using the "
@@ -56,24 +56,3 @@ class OpenRouterConverter:
             ],
         )
         return response.choices[0].message.content
-
-
-class OpenAIConverter:
-    """Real converter backed by the OpenAI Responses API."""
-
-    def __init__(self, model: str | None = None) -> None:
-        self._client = OpenAI()
-        self._model = model or os.getenv("OPENAI_MODEL", DEFAULT_OPENAI_MODEL)
-
-    def convert(self, latex_source: str, reference: str, guides: str = "") -> str:
-        parts = [f"Reference Touying presentation:\n\n{reference}"]
-        if guides:
-            parts.append(f"Guides:\n\n{guides}")
-        parts.append(f"Convert this Beamer source to a Typst Touying deck:\n\n{latex_source}")
-        user = "\n\n".join(parts)
-        response = self._client.responses.create(
-            model=self._model,
-            instructions=_INSTRUCTIONS,
-            input=user,
-        )
-        return response.output_text

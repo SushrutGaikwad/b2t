@@ -73,9 +73,9 @@ deterministic.
 - [Typst CLI](https://github.com/typst/typst#installation) 0.14+ on PATH
   (`winget install Typst.Typst`, `brew install typst`, or
   `cargo install typst-cli`). Verify with `typst --version`.
-- An OpenAI API key, for real conversions. The pipeline runs offline with the
-  fake converter (tests and the UI checkbox), but actual Beamer to Typst
-  translation calls OpenAI.
+- An OpenRouter API key, for real conversions. The pipeline runs offline with
+  the fake converter (tests and the UI checkbox), but actual Beamer to Typst
+  translation calls open-source models via OpenRouter.
 
 No LaTeX installation is needed; input decks are already compiled.
 
@@ -90,10 +90,12 @@ uv sync
 Create a `.env` file in the repo root:
 
 ```
-OPENAI_API_KEY=sk-...
+OPENROUTER_API_KEY=sk-or-...
 ```
 
-Optionally add `OPENAI_MODEL=...` to override the default model.
+Optionally add `B2T_MODEL=...` to override the default model
+(`openai/gpt-oss-120b`), or `B2T_BASE_URL=...` to point at any
+OpenAI-compatible endpoint (for example a campus vLLM server).
 
 ### Verify
 
@@ -123,5 +125,5 @@ uv run uvicorn b2t.api.app:app --reload
 
 Open http://127.0.0.1:8000. Click "Use sample deck" for a one-click run, or
 pick a deck folder with the folder chooser. Tick "use fake converter (offline)"
-to exercise the pipeline without calling OpenAI. The page shows per-node
+to exercise the pipeline without calling OpenRouter. The page shows per-node
 progress, the generated `main.typ`, the compiled PDF, and any compile error.

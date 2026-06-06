@@ -14,11 +14,6 @@ def test_build_extensions_cover_beamer_outputs():
         assert ext in config.BUILD_FILE_EXTENSIONS
 
 
-def test_openai_models_includes_default_first():
-    assert config.OPENAI_MODELS[0] == config.DEFAULT_OPENAI_MODEL
-    assert "gpt-5.5" in config.OPENAI_MODELS
-
-
 def test_open_models_default_is_first_and_frontier():
     assert config.DEFAULT_MODEL == config.OPEN_MODELS[0].id
     assert config.OPEN_MODELS[0].strength == "frontier"
