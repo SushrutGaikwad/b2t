@@ -6,11 +6,19 @@ from b2t.api.jobs import JobRecord
 
 
 class JobCreated(BaseModel):
+    """Response to a job submission: the new job's id and initial status."""
+
     job_id: str
     status: str
 
 
 class JobView(BaseModel):
+    """A job's public state, as polled by the UI.
+
+    Mirrors JobRecord but exposes names instead of paths, and has_pdf as a
+    live filesystem check.
+    """
+
     id: str
     status: str
     current_node: str | None
@@ -23,29 +31,48 @@ class JobView(BaseModel):
 
 
 class SaveRequest(BaseModel):
+    """Body for save-and-compile: the edited Typst source to write."""
+
     source: str
 
 
 class SaveResult(BaseModel):
+    """Outcome of save-and-compile: ok plus the compiler error, if any."""
+
     ok: bool
     error: str | None
 
 
 class ModelOption(BaseModel):
+    """One dropdown entry: the OpenRouter model id and its display label."""
+
     id: str
     label: str
 
 
 class ModelsView(BaseModel):
+    """The model catalog as dropdown options plus the default model id."""
+
     models: list[ModelOption]
     default: str
 
 
 class GraphView(BaseModel):
+    """The pipeline topology as a mermaid flowchart definition."""
+
     mermaid: str
 
 
 def to_view(job: JobRecord) -> JobView:
+    """Project a JobRecord onto the public JobView.
+
+    Args:
+        job: The internal job record.
+
+    Returns:
+        A JobView with file names instead of paths and has_pdf checked
+        against the filesystem.
+    """
     has_pdf = job.pdf_path is not None and Path(job.pdf_path).exists()
     return JobView(
         id=job.id,

@@ -7,6 +7,13 @@ def list_build_files(directory: Path) -> list[Path]:
     """Return build files under directory matching known extensions.
 
     Matches on full filename so double extensions like .synctex.gz are caught.
+
+    Args:
+        directory: Directory tree to scan recursively.
+
+    Returns:
+        Sorted paths of every file whose name ends in a BUILD_FILE_EXTENSIONS
+        entry. Nothing is deleted.
     """
     return sorted(
         p
@@ -16,7 +23,14 @@ def list_build_files(directory: Path) -> list[Path]:
 
 
 def remove_build_files(directory: Path) -> list[Path]:
-    """Delete build files under directory; return the removed paths."""
+    """Delete build files under directory.
+
+    Args:
+        directory: Directory tree to clean recursively.
+
+    Returns:
+        The paths that were deleted, sorted.
+    """
     removed = list_build_files(directory)
     for path in removed:
         path.unlink()

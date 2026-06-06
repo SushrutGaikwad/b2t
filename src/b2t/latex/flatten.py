@@ -5,10 +5,23 @@ _INPUT_RE = re.compile(r"\\(?:input|include)\{([^}]+)\}")
 
 
 def flatten(main_tex: Path) -> str:
-    """Expand \\input/\\include recursively into one string. Fail loudly on misses."""
+    """Expand \\input/\\include recursively into one LaTeX string.
+
+    Args:
+        main_tex: Path to the main .tex file; includes are resolved relative
+            to its directory.
+
+    Returns:
+        The complete LaTeX source with every include replaced by its content.
+
+    Raises:
+        FileNotFoundError: If an included file is missing; content is never
+            guessed.
+    """
     deck_dir = main_tex.parent
 
     def expand(tex: Path) -> str:
+        """Return the file's text with its includes expanded recursively."""
         text = tex.read_text(encoding="utf-8")
 
         def repl(match: re.Match) -> str:

@@ -1,3 +1,5 @@
+"""Static configuration: paths, the model catalog, and cleanup extensions."""
+
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -12,7 +14,14 @@ OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 
 class ModelInfo(BaseModel):
-    """One open-source model in the conversion catalog."""
+    """One open-source model in the conversion catalog.
+
+    Attributes:
+        id: OpenRouter model id (author/slug).
+        complexity: Parameter size and architecture, e.g. "120B MoE".
+        strength: Capability tier: frontier | strong | capable | basic.
+        reasoning: Reasoning level: high | hybrid | medium | none.
+    """
 
     id: str
     complexity: str

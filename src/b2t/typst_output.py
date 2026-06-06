@@ -3,8 +3,14 @@ def strip_code_fence(typst_source: str) -> str:
 
     Some models wrap their whole answer in ```typst ... ```. A leading fence
     is valid Typst (it opens a raw block), so the deck compiles into a PDF of
-    verbatim source; the compiler never flags it. Only a fence around the
-    entire output is removed; raw blocks inside the deck are left alone.
+    verbatim source; the compiler never flags it.
+
+    Args:
+        typst_source: Raw converter output.
+
+    Returns:
+        The source without the wrapping fence, or unchanged when no fence
+        wraps the entire output. Raw blocks inside the deck are left alone.
     """
     lines = typst_source.strip().splitlines()
     if len(lines) < 2 or not lines[0].startswith("```") or lines[-1].strip() != "```":

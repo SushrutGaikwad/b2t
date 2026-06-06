@@ -5,6 +5,8 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from loguru import logger
+
 from b2t.graph import build_graph
 from b2t.llm import ConverterLLM
 
@@ -24,6 +26,23 @@ EXECUTOR = ThreadPoolExecutor(max_workers=2)
 
 @dataclass
 class JobRecord:
+    """One conversion job's mutable record, as shown to the UI.
+
+    Attributes:
+        id: Opaque job identifier (uuid hex).
+        status: queued | running | succeeded | compile_failed | failed.
+        current_node: Name of the pipeline node currently running, if any.
+        error: Failure or compile error text, if any.
+        input_dir: Directory the deck was read from.
+        output_dir: Directory main.typ, images, and the PDF are written to.
+        main_tex: Detected main file name, once known.
+        included_tex: Names of included .tex files, once known.
+        images: Names of referenced images, once known.
+        has_typst: True once Typst source has been generated.
+        typst_path: Path to the written main.typ, once written.
+        pdf_path: Path to the compiled PDF, on success.
+    """
+
     id: str
     status: str = "queued"
     current_node: str | None = None
@@ -39,23 +58,39 @@ class JobRecord:
 
 
 class JobStore:
-    """Thread-safe in-memory job registry."""
+    """Thread-safe in-memory job registry shared by handlers and workers."""
 
     def __init__(self) -> None:
+        """Create an empty registry guarded by a lock."""
         self._jobs: dict[str, JobRecord] = {}
         self._lock = threading.Lock()
 
     def create(self, **kwargs) -> JobRecord:
+        """Create and register a new job.
+
+        Args:
+            **kwargs: Initial JobRecord fields (e.g. input_dir, output_dir).
+
+        Returns:
+            The new JobRecord with a fresh id.
+        """
         job = JobRecord(id=uuid.uuid4().hex, **kwargs)
         with self._lock:
             self._jobs[job.id] = job
         return job
 
     def get(self, job_id: str) -> JobRecord | None:
+        """Return the job with this id, or None if unknown."""
         with self._lock:
             return self._jobs.get(job_id)
 
     def update(self, job_id: str, **changes) -> None:
+        """Apply field changes to an existing job.
+
+        Args:
+            job_id: Id of a job that must already exist.
+            **changes: JobRecord fields to overwrite.
+        """
         with self._lock:
             job = self._jobs[job_id]
             for key, value in changes.items():
@@ -77,20 +112,35 @@ def run_job(
 
     The converter is constructed inside the failure boundary so a missing API
     key records the job as failed instead of crashing the request handler.
+
+    Args:
+        store: Registry holding the job's record.
+        job_id: Id of the record to drive.
+        input_dir: Deck directory to convert (treated as read-only).
+        output_dir: Directory for main.typ, images, and the PDF.
+        make_converter: Zero-arg factory producing the ConverterLLM.
+
+    Returns:
+        None. The outcome lands on the job record: succeeded, compile_failed
+        (with the compiler's error), or failed (with the exception text).
     """
     seed = {"input_dir": input_dir, "output_dir": output_dir}
     state = dict(seed)
     store.update(job_id, status="running")
+    logger.info("job {} running: {} -> {}", job_id, input_dir, output_dir)
     try:
         graph = build_graph(make_converter())
         for mode, chunk in graph.stream(seed, stream_mode=["updates", "debug"]):
             if mode == "debug":
                 if chunk.get("type") == "task":
-                    store.update(job_id, current_node=chunk["payload"]["name"])
+                    node = chunk["payload"]["name"]
+                    logger.debug("job {} at node {}", job_id, node)
+                    store.update(job_id, current_node=node)
             else:
                 for update in chunk.values():
                     state.update(update)
     except Exception as exc:
+        logger.error("job {} failed: {}", job_id, exc)
         store.update(job_id, status="failed", error=str(exc))
         return
 
@@ -104,8 +154,10 @@ def run_job(
         typst_path=state.get("typst_path"),
     )
     if state.get("compiled"):
+        logger.info("job {} succeeded", job_id)
         store.update(job_id, status="succeeded", pdf_path=state.get("pdf_path"))
     else:
+        logger.warning("job {} compile failed", job_id)
         store.update(
             job_id, status="compile_failed", error=state.get("compile_error")
         )

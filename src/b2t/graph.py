@@ -15,7 +15,17 @@ from b2t.state import PipelineState
 
 
 def build_graph(llm: ConverterLLM):
-    """Build and compile the linear v0 conversion graph."""
+    """Build and compile the linear v0 conversion graph.
+
+    Args:
+        llm: Converter bound into the convert node; every other node is
+            deterministic.
+
+    Returns:
+        A compiled LangGraph runnable over PipelineState: copy_input ->
+        clean_build -> detect_main -> flatten -> strip_overlays -> convert ->
+        write_output -> compile.
+    """
     graph = StateGraph(PipelineState)
 
     graph.add_node("copy_input", copy_input)
