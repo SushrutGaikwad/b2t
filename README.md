@@ -1,17 +1,24 @@
 # b2t
 
-Converts compiled LaTeX Beamer decks into accessible Typst Touying PDFs.
+An AI-powered conversion pipeline that turns compiled LaTeX Beamer decks into
+accessible Typst Touying PDFs. A deterministic LangGraph workflow does
+everything that does not need a model; one LLM step, served by open-source
+models (gpt-oss, Llama, Qwen, Gemma, Mistral) via OpenRouter, performs the
+Beamer to Typst translation. Built for university faculty, with PDF/UA-1
+tagging for blind and visually impaired readers as the driving goal.
 
 ## Contents
 
 - [Architecture (v0)](#architecture-v0)
   - [Nodes](#nodes)
+- [Models](#models)
 - [Getting started](#getting-started)
   - [Requirements](#requirements)
   - [Setup](#setup)
   - [Verify](#verify)
 - [Run (v0)](#run-v0)
 - [Run the testing UI](#run-the-testing-ui)
+- [Logs](#logs)
 
 ## Architecture (v0)
 
@@ -56,13 +63,24 @@ deterministic.
    the wrapped content. The output never uses overlays.
 6. `convert` (LLM): The single model call. Translates the flattened,
    overlay-free Beamer source into Typst Touying source, using the reference
-   presentation and the Typst math guide as context.
+   presentation and the Typst math guide as context. A markdown code fence
+   wrapping the whole answer is stripped deterministically.
 7. `write_output` (deterministic): Normalizes `image()` references to the
    copied filenames (with extension), writes `main.typ` to the output
    directory, and copies the referenced images alongside it.
 8. `compile` (deterministic): Runs `typst compile` on `main.typ` and records
    the result (PDF path on success, error text on failure). v0 records the
    error but does not yet retry.
+
+## Models
+
+Conversions use open-weight LLMs only, so a university can later self-host the
+same families on its own cluster behind any OpenAI-compatible endpoint (vLLM,
+Ollama). The catalog in `src/b2t/config.py` lists the strongest open-weight
+flagship of each family (Qwen 3.5 397B, Mistral Large 3, Llama 4 Maverick,
+Gemma 4 31B) plus the sizes campuses most commonly self-host. The testing UI
+shows each model's complexity, strength, and reasoning level in the dropdown;
+the default is `openai/gpt-oss-120b`.
 
 ## Getting started
 
@@ -124,6 +142,20 @@ uv run uvicorn b2t.api.app:app --reload
 ```
 
 Open http://127.0.0.1:8000. Click "Use sample deck" for a one-click run, or
-pick a deck folder with the folder chooser. Tick "use fake converter (offline)"
-to exercise the pipeline without calling OpenRouter. The page shows per-node
-progress, the generated `main.typ`, the compiled PDF, and any compile error.
+pick a deck folder with the folder chooser and a model from the dropdown. Tick
+"use fake converter (offline)" to exercise the pipeline without calling
+OpenRouter. The page shows per-node progress, the generated `main.typ` in an
+editor (save to recompile), the compiled PDF, and any compile error.
+
+## Logs
+
+The console shows INFO lines; the full DEBUG trail is written to
+`logs/b2t.log` (rotated at 10 MB, kept 10 days, gitignored). Tracebacks omit
+variable values so API keys never land in the logs.
+
+---
+
+Keywords: AI document conversion, LLM pipeline, LangGraph, generative AI,
+open-source LLM, OpenRouter, gpt-oss, Llama, Qwen, Gemma, Mistral, vLLM,
+Typst, Touying, LaTeX, Beamer, accessible PDF, PDF/UA, screen reader,
+document accessibility, higher education.
