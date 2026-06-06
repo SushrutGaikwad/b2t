@@ -1,5 +1,6 @@
 import threading
 import uuid
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -66,19 +67,22 @@ def run_job(
     job_id: str,
     input_dir: Path,
     output_dir: Path,
-    converter: ConverterLLM,
+    make_converter: Callable[[], ConverterLLM],
 ) -> None:
     """Run the conversion graph, updating the job record as each node runs.
 
     current_node is driven by debug "task" events, which fire when a node is
     about to run, so the record names the node that is actually running (not the
     last one that finished). Final state is accumulated from the "updates".
+
+    The converter is constructed inside the failure boundary so a missing API
+    key records the job as failed instead of crashing the request handler.
     """
-    graph = build_graph(converter)
     seed = {"input_dir": input_dir, "output_dir": output_dir}
     state = dict(seed)
     store.update(job_id, status="running")
     try:
+        graph = build_graph(make_converter())
         for mode, chunk in graph.stream(seed, stream_mode=["updates", "debug"]):
             if mode == "debug":
                 if chunk.get("type") == "task":

@@ -11,7 +11,7 @@ def test_run_job_reaches_terminal(tmp_path):
     store = JobStore()
     out = tmp_path / "out"
     job = store.create(input_dir=SAMPLE_DECK, output_dir=out)
-    run_job(store, job.id, SAMPLE_DECK, out, FakeConverter("= Hi\n"))
+    run_job(store, job.id, SAMPLE_DECK, out, lambda: FakeConverter("= Hi\n"))
     rec = store.get(job.id)
     assert rec.status in {"succeeded", "compile_failed", "failed"}
     assert rec.main_tex == "main.tex"
@@ -29,7 +29,7 @@ def test_run_job_records_deterministic_failure(tmp_path):
     (deck / "notes.tex").write_text("just notes", encoding="utf-8")
     store = JobStore()
     job = store.create(input_dir=deck, output_dir=tmp_path / "out")
-    run_job(store, job.id, deck, tmp_path / "out", FakeConverter("= Hi\n"))
+    run_job(store, job.id, deck, tmp_path / "out", lambda: FakeConverter("= Hi\n"))
     rec = store.get(job.id)
     assert rec.status == "failed"
     assert "beamer main" in rec.error
@@ -76,5 +76,5 @@ def test_current_node_tracks_the_running_node(tmp_path):
             captured["during_convert"] = store.get(job.id).current_node
             return "= Hi\n"
 
-    run_job(store, job.id, SAMPLE_DECK, tmp_path / "out", SpyConverter())
+    run_job(store, job.id, SAMPLE_DECK, tmp_path / "out", lambda: SpyConverter())
     assert captured["during_convert"] == "convert"

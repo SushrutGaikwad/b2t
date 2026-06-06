@@ -224,3 +224,13 @@ def test_make_converter_picks_fake_or_openrouter(monkeypatch):
     real = _make_converter(False, "qwen/qwen3-32b")
     assert isinstance(real, OpenRouterConverter)
     assert real._model == "qwen/qwen3-32b"
+
+
+def test_real_job_without_key_records_failed(monkeypatch):
+    client = _client()  # create_app loads .env, so clear the key afterwards
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    res = client.post("/api/jobs/sample", data={"use_fake": "false"})
+    assert res.status_code == 200
+    body = _wait_terminal(client, res.json()["job_id"])
+    assert body["status"] == "failed"
+    assert "OPENROUTER_API_KEY" in body["error"]

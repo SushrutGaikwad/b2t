@@ -82,7 +82,8 @@ def create_app(store: JobStore | None = None) -> FastAPI:
         output_dir = root.parent / (root.name + "_out")
         job = jobs.create(input_dir=root, output_dir=output_dir)
         EXECUTOR.submit(
-            run_job, jobs, job.id, root, output_dir, _make_converter(use_fake, model)
+            run_job, jobs, job.id, root, output_dir,
+            lambda: _make_converter(use_fake, model),
         )
         return JobCreated(job_id=job.id, status=job.status)
 
@@ -92,7 +93,7 @@ def create_app(store: JobStore | None = None) -> FastAPI:
         job = jobs.create(input_dir=SAMPLE_DECK, output_dir=output_dir)
         EXECUTOR.submit(
             run_job, jobs, job.id, SAMPLE_DECK, output_dir,
-            _make_converter(use_fake, model),
+            lambda: _make_converter(use_fake, model),
         )
         return JobCreated(job_id=job.id, status=job.status)
 
