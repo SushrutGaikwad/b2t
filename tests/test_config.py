@@ -30,6 +30,17 @@ def test_open_models_have_metadata():
         assert m.complexity and m.strength and m.reasoning
 
 
+def test_open_models_include_strongest_per_family():
+    ids = {m.id for m in config.OPEN_MODELS}
+    for flagship in (
+        "qwen/qwen3.5-397b-a17b",
+        "mistralai/mistral-large-2512",
+        "meta-llama/llama-4-maverick",
+        "google/gemma-4-31b-it",
+    ):
+        assert flagship in ids
+
+
 def test_model_label_composition():
     assert (
         config.OPEN_MODELS[0].label

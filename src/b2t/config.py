@@ -27,10 +27,15 @@ class ModelInfo(BaseModel):
         return f"{short} - {self.strength}, {reasoning} reasoning, {self.complexity}"
 
 
-# Open-source families US universities most commonly self-host, strongest
-# first. IDs verified against the live OpenRouter API on 2026-06-05.
+# Open-source models, strongest first: the strongest open-weight flagship of
+# each family, then the sizes US universities most commonly self-host. IDs
+# verified against the live OpenRouter API on 2026-06-06.
 OPEN_MODELS = (
     ModelInfo(id="openai/gpt-oss-120b", complexity="120B MoE", strength="frontier", reasoning="high"),
+    ModelInfo(id="qwen/qwen3.5-397b-a17b", complexity="397B MoE", strength="frontier", reasoning="high"),
+    ModelInfo(id="mistralai/mistral-large-2512", complexity="675B MoE", strength="frontier", reasoning="none"),
+    ModelInfo(id="meta-llama/llama-4-maverick", complexity="400B MoE", strength="strong", reasoning="none"),
+    ModelInfo(id="google/gemma-4-31b-it", complexity="31B dense", strength="strong", reasoning="high"),
     ModelInfo(id="qwen/qwen3-32b", complexity="32B dense", strength="strong", reasoning="hybrid"),
     ModelInfo(id="meta-llama/llama-3.3-70b-instruct", complexity="70B dense", strength="strong", reasoning="none"),
     ModelInfo(id="meta-llama/llama-4-scout", complexity="109B MoE", strength="strong", reasoning="none"),
