@@ -31,8 +31,13 @@ class SaveResult(BaseModel):
     error: str | None
 
 
+class ModelOption(BaseModel):
+    id: str
+    label: str
+
+
 class ModelsView(BaseModel):
-    models: list[str]
+    models: list[ModelOption]
     default: str
 
 

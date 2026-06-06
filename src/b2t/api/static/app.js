@@ -131,10 +131,10 @@ async function loadModels() {
   try {
     const res = await fetch("/api/models");
     const data = await res.json();
-    for (const id of data.models) {
+    for (const m of data.models) {
       const opt = document.createElement("option");
-      opt.value = id;
-      opt.textContent = id === data.default ? `${id} (default)` : id;
+      opt.value = m.id;
+      opt.textContent = m.id === data.default ? `${m.label} (default)` : m.label;
       sel.appendChild(opt);
     }
   } catch (e) {

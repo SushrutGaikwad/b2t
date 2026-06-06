@@ -12,13 +12,14 @@ from b2t.api.schemas import (
     GraphView,
     JobCreated,
     JobView,
+    ModelOption,
     ModelsView,
     SaveRequest,
     SaveResult,
     to_view,
 )
 from b2t.graph import build_graph
-from b2t.config import DEFAULT_OPENAI_MODEL, OPENAI_MODELS, REPO_ROOT
+from b2t.config import DEFAULT_MODEL, OPEN_MODELS, REPO_ROOT
 from b2t.typst_runner import compile_typst
 from b2t.llm import ConverterLLM, FakeConverter, OpenAIConverter
 
@@ -148,7 +149,10 @@ def create_app(store: JobStore | None = None) -> FastAPI:
 
     @app.get("/api/models", response_model=ModelsView)
     def get_models():
-        return ModelsView(models=list(OPENAI_MODELS), default=DEFAULT_OPENAI_MODEL)
+        return ModelsView(
+            models=[ModelOption(id=m.id, label=m.label) for m in OPEN_MODELS],
+            default=DEFAULT_MODEL,
+        )
 
     @app.get("/api/graph", response_model=GraphView)
     def get_graph():

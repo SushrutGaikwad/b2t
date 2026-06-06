@@ -185,13 +185,14 @@ def test_index_has_editor_and_buttons():
     assert "codemirror" in text.lower()
 
 
-def test_models_endpoint_lists_config_models():
-    from b2t.config import DEFAULT_OPENAI_MODEL, OPENAI_MODELS
+def test_models_endpoint_lists_open_models_with_labels():
+    from b2t.config import DEFAULT_MODEL, OPEN_MODELS
 
     body = _client().get("/api/models").json()
-    assert body["models"] == list(OPENAI_MODELS)
-    assert body["default"] == DEFAULT_OPENAI_MODEL
-    assert body["default"] in body["models"]
+    assert body["default"] == DEFAULT_MODEL
+    assert [m["id"] for m in body["models"]] == [m.id for m in OPEN_MODELS]
+    assert [m["label"] for m in body["models"]] == [m.label for m in OPEN_MODELS]
+    assert body["default"] in {m["id"] for m in body["models"]}
 
 
 def test_index_has_model_select():
