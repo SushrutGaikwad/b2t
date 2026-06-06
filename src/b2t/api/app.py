@@ -21,7 +21,7 @@ from b2t.api.schemas import (
 from b2t.graph import build_graph
 from b2t.config import DEFAULT_MODEL, OPEN_MODELS, REPO_ROOT
 from b2t.typst_runner import compile_typst
-from b2t.llm import ConverterLLM, FakeConverter, OpenAIConverter
+from b2t.llm import ConverterLLM, FakeConverter, OpenRouterConverter
 
 SAMPLE_DECK = REPO_ROOT / "tests" / "fixtures" / "sample_deck"
 STATIC_DIR = Path(__file__).parent / "static"
@@ -34,7 +34,7 @@ FAKE_TYPST = (
 def _make_converter(use_fake: bool, model: str) -> ConverterLLM:
     if use_fake:
         return FakeConverter(FAKE_TYPST)
-    return OpenAIConverter(model=model or None)
+    return OpenRouterConverter(model=model or None)
 
 
 def _safe_target(root: Path, rel: str) -> Path:

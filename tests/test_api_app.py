@@ -213,3 +213,14 @@ def test_index_has_graph_container():
     assert '<div id="graph"' in text
     assert "mermaid" in text.lower()
     assert '<ul id="nodes"' not in text
+
+
+def test_make_converter_picks_fake_or_openrouter(monkeypatch):
+    from b2t.api.app import _make_converter
+    from b2t.llm import FakeConverter, OpenRouterConverter
+
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+    assert isinstance(_make_converter(True, ""), FakeConverter)
+    real = _make_converter(False, "qwen/qwen3-32b")
+    assert isinstance(real, OpenRouterConverter)
+    assert real._model == "qwen/qwen3-32b"

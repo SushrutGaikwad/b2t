@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from loguru import logger
 
 from b2t.graph import build_graph
-from b2t.llm import ConverterLLM, OpenAIConverter
+from b2t.llm import ConverterLLM, OpenRouterConverter
 
 
 def convert_deck(
@@ -14,7 +14,7 @@ def convert_deck(
 ) -> dict:
     """Convert a Beamer deck directory into a compiled Typst Touying deck."""
     load_dotenv()
-    converter = llm or OpenAIConverter()
+    converter = llm or OpenRouterConverter()
     graph = build_graph(converter)
     logger.info("converting {} -> {}", input_dir, output_dir)
     result = graph.invoke(
