@@ -27,12 +27,10 @@ def test_copy_input_copies_deck(tmp_path):
 
 
 def test_clean_build_node(deck_copy):
+    from conftest import FIXTURE_BUILD_FILES
+
     update = clean_build(_state(work_dir=deck_copy))
-    assert {p.name for p in update["removed_build_files"]} == {
-        "main.aux",
-        "main.log",
-        "main.nav",
-    }
+    assert {p.name for p in update["removed_build_files"]} == FIXTURE_BUILD_FILES
 
 
 def test_detect_main_node(deck_copy):
