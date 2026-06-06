@@ -5,6 +5,18 @@ from b2t.typst_runner import compile_typst, typst_available
 pytestmark = pytest.mark.integration
 
 
+def test_missing_typst_cli_records_clear_error(tmp_path, monkeypatch):
+    def raise_missing(*args, **kwargs):
+        raise FileNotFoundError("typst")
+
+    monkeypatch.setattr("b2t.typst_runner.subprocess.run", raise_missing)
+    typ = tmp_path / "any.typ"
+    typ.write_text("= Hi\n", encoding="utf-8")
+    result = compile_typst(typ)
+    assert not result.ok
+    assert "typst CLI not found" in result.error
+
+
 @pytest.mark.skipif(not typst_available(), reason="typst binary not installed")
 def test_compile_success(tmp_path):
     typ = tmp_path / "ok.typ"

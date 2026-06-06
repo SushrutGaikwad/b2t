@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
+from loguru import logger
 
 from b2t.api.jobs import EXECUTOR, JobStore, run_job
 from b2t.api.schemas import (
@@ -20,6 +21,7 @@ from b2t.api.schemas import (
 )
 from b2t.graph import build_graph
 from b2t.config import DEFAULT_MODEL, OPEN_MODELS, REPO_ROOT
+from b2t.log import setup_logging
 from b2t.typst_runner import compile_typst
 from b2t.llm import ConverterLLM, FakeConverter, OpenRouterConverter
 
@@ -32,13 +34,33 @@ FAKE_TYPST = (
 
 
 def _make_converter(use_fake: bool, model: str) -> ConverterLLM:
+    """Pick the converter for a job.
+
+    Args:
+        use_fake: True for the offline FakeConverter (no network).
+        model: Model id from the dropdown; empty keeps the env/config default.
+
+    Returns:
+        A ConverterLLM ready to be used by the pipeline.
+    """
     if use_fake:
         return FakeConverter(FAKE_TYPST)
     return OpenRouterConverter(model=model or None)
 
 
 def _safe_target(root: Path, rel: str) -> Path:
-    """Resolve rel under root, rejecting any path that escapes root."""
+    """Resolve rel under root, rejecting any path that escapes root.
+
+    Args:
+        root: Directory uploads must stay inside.
+        rel: Relative path supplied by the client.
+
+    Returns:
+        The resolved absolute path under root.
+
+    Raises:
+        HTTPException: 400 if the path escapes root (e.g. via "..").
+    """
     target = (root / rel).resolve()
     if not target.is_relative_to(root):
         raise HTTPException(status_code=400, detail="invalid path in upload")
@@ -46,7 +68,12 @@ def _safe_target(root: Path, rel: str) -> Path:
 
 
 def _reconstruct(files: list[UploadFile], root: Path) -> None:
-    """Write each uploaded file under root at its relative path. Reject escapes."""
+    """Write each uploaded file under root at its relative path.
+
+    Args:
+        files: Multipart uploads whose filenames carry deck-relative paths.
+        root: Destination directory for the reconstructed deck.
+    """
     root = root.resolve()
     for upload in files:
         target = _safe_target(root, upload.filename or "")
@@ -55,7 +82,14 @@ def _reconstruct(files: list[UploadFile], root: Path) -> None:
 
 
 def _zip_dir(directory: Path) -> Path:
-    """Zip every file under directory into a fresh temp zip; return its path."""
+    """Zip every file under directory into a fresh temp zip.
+
+    Args:
+        directory: Directory whose files are archived (paths kept relative).
+
+    Returns:
+        Path to the created zip file in a new temporary directory.
+    """
     zip_path = Path(tempfile.mkdtemp(prefix="b2t_download_")) / "deck.zip"
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as archive:
         for path in sorted(directory.rglob("*")):
@@ -65,7 +99,16 @@ def _zip_dir(directory: Path) -> Path:
 
 
 def create_app(store: JobStore | None = None) -> FastAPI:
+    """Build the testing-UI FastAPI app.
+
+    Args:
+        store: Job registry to use; a fresh in-memory JobStore by default.
+
+    Returns:
+        The configured FastAPI application serving the API and static UI.
+    """
     load_dotenv()
+    setup_logging()
     app = FastAPI(title="b2t testing UI")
     jobs = store or JobStore()
 
@@ -75,12 +118,14 @@ def create_app(store: JobStore | None = None) -> FastAPI:
         use_fake: bool = Form(False),
         model: str = Form(""),
     ):
+        """Reconstruct an uploaded deck folder and start a conversion job."""
         if not files:
             raise HTTPException(status_code=400, detail="no files submitted")
         root = Path(tempfile.mkdtemp(prefix="b2t_upload_"))
         _reconstruct(files, root)
         output_dir = root.parent / (root.name + "_out")
         job = jobs.create(input_dir=root, output_dir=output_dir)
+        logger.info("job {} created for upload ({} files)", job.id, len(files))
         EXECUTOR.submit(
             run_job, jobs, job.id, root, output_dir,
             lambda: _make_converter(use_fake, model),
@@ -89,8 +134,10 @@ def create_app(store: JobStore | None = None) -> FastAPI:
 
     @app.post("/api/jobs/sample", response_model=JobCreated)
     async def create_sample_job(use_fake: bool = Form(False), model: str = Form("")):
+        """Start a conversion job on the bundled sample deck."""
         output_dir = Path(tempfile.mkdtemp(prefix="b2t_sample_")) / "out"
         job = jobs.create(input_dir=SAMPLE_DECK, output_dir=output_dir)
+        logger.info("job {} created for the sample deck", job.id)
         EXECUTOR.submit(
             run_job, jobs, job.id, SAMPLE_DECK, output_dir,
             lambda: _make_converter(use_fake, model),
@@ -99,6 +146,7 @@ def create_app(store: JobStore | None = None) -> FastAPI:
 
     @app.get("/api/jobs/{job_id}", response_model=JobView)
     def get_job(job_id: str):
+        """Return the job's status, progress, and discovered files. 404 if unknown."""
         job = jobs.get(job_id)
         if job is None:
             raise HTTPException(status_code=404, detail="unknown job")
@@ -106,6 +154,7 @@ def create_app(store: JobStore | None = None) -> FastAPI:
 
     @app.get("/api/jobs/{job_id}/typ")
     def get_typ(job_id: str):
+        """Return the generated main.typ as plain text. 404 if not produced yet."""
         job = jobs.get(job_id)
         if job is None or job.typst_path is None:
             raise HTTPException(status_code=404, detail="no typst output")
@@ -113,6 +162,7 @@ def create_app(store: JobStore | None = None) -> FastAPI:
 
     @app.get("/api/jobs/{job_id}/pdf")
     def get_pdf(job_id: str):
+        """Return the compiled PDF. 404 if compilation has not succeeded."""
         job = jobs.get(job_id)
         if job is None or job.pdf_path is None or not Path(job.pdf_path).exists():
             raise HTTPException(status_code=404, detail="no pdf output")
@@ -120,11 +170,17 @@ def create_app(store: JobStore | None = None) -> FastAPI:
 
     @app.post("/api/jobs/{job_id}/save", response_model=SaveResult)
     def save_job(job_id: str, req: SaveRequest):
+        """Overwrite the job's main.typ with edited source and recompile it.
+
+        Returns the compile outcome; on failure the stale PDF is removed so a
+        later download stays consistent with the broken source.
+        """
         job = jobs.get(job_id)
         if job is None or job.typst_path is None:
             raise HTTPException(status_code=404, detail="no typst output to save")
         Path(job.typst_path).write_text(req.source, encoding="utf-8")
         result = compile_typst(Path(job.typst_path))
+        logger.info("job {} save-and-compile: ok={}", job_id, result.ok)
         if result.ok:
             jobs.update(
                 job_id, status="succeeded", pdf_path=result.pdf_path, error=None
@@ -140,6 +196,7 @@ def create_app(store: JobStore | None = None) -> FastAPI:
 
     @app.get("/api/jobs/{job_id}/download")
     def download_job(job_id: str):
+        """Return the job's output directory as deck.zip. 404 if there is none."""
         job = jobs.get(job_id)
         if job is None or job.output_dir is None or not Path(job.output_dir).exists():
             raise HTTPException(status_code=404, detail="no output to download")
@@ -150,6 +207,7 @@ def create_app(store: JobStore | None = None) -> FastAPI:
 
     @app.get("/api/models", response_model=ModelsView)
     def get_models():
+        """Return the model catalog as {id, label} options plus the default id."""
         return ModelsView(
             models=[ModelOption(id=m.id, label=m.label) for m in OPEN_MODELS],
             default=DEFAULT_MODEL,
@@ -157,6 +215,7 @@ def create_app(store: JobStore | None = None) -> FastAPI:
 
     @app.get("/api/graph", response_model=GraphView)
     def get_graph():
+        """Return the pipeline topology as a mermaid flowchart definition."""
         mermaid = build_graph(FakeConverter()).get_graph().draw_mermaid()
         return GraphView(mermaid=mermaid)
 

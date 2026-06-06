@@ -15,6 +15,9 @@ wheels/
 # Conversion output
 out/
 
+# Log files
+logs/
+
 # Reading
 CODEBASE_GUIDE.md
 
