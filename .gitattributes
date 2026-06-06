@@ -1,0 +1,51 @@
+# Keep LaTeX build artifacts (which the workflow accepts as input) and
+# Typst reference/fixture files out of the GitHub language stats.
+# Build-artifact patterns mirror BUILD_FILE_EXTENSIONS in src/b2t/config.py.
+
+*.aux linguist-generated
+*.lof linguist-generated
+*.log linguist-generated
+*.lot linguist-generated
+*.fls linguist-generated
+*.out linguist-generated
+*.toc linguist-generated
+*.fmt linguist-generated
+*.fot linguist-generated
+*.cb linguist-generated
+*.cb2 linguist-generated
+*.dvi linguist-generated
+*.xdv linguist-generated
+*.bbl linguist-generated
+*.bcf linguist-generated
+*.blg linguist-generated
+*.run.xml linguist-generated
+*.fdb_latexmk linguist-generated
+*.synctex linguist-generated
+*.synctex.gz linguist-generated
+*.pdfsync linguist-generated
+*.nav linguist-generated
+*.snm linguist-generated
+*.vrb linguist-generated
+*.pre linguist-generated
+*.soc linguist-generated
+*.loa linguist-generated
+*.thm linguist-generated
+*.cpt linguist-generated
+*.spl linguist-generated
+*.lox linguist-generated
+*.idx linguist-generated
+*.ilg linguist-generated
+*.ind linguist-generated
+*.ist linguist-generated
+*.acn linguist-generated
+*.acr linguist-generated
+*.glg linguist-generated
+*.glo linguist-generated
+*.gls linguist-generated
+*.glsdefs linguist-generated
+*.slg linguist-generated
+*.slo linguist-generated
+*.sls linguist-generated
+*.xdy linguist-generated
+
+*.typ linguist-vendored
