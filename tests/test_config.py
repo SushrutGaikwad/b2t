@@ -17,3 +17,34 @@ def test_build_extensions_cover_beamer_outputs():
 def test_openai_models_includes_default_first():
     assert config.OPENAI_MODELS[0] == config.DEFAULT_OPENAI_MODEL
     assert "gpt-5.5" in config.OPENAI_MODELS
+
+
+def test_open_models_default_is_first_and_frontier():
+    assert config.DEFAULT_MODEL == config.OPEN_MODELS[0].id
+    assert config.OPEN_MODELS[0].strength == "frontier"
+
+
+def test_open_models_ids_unique_and_namespaced():
+    ids = [m.id for m in config.OPEN_MODELS]
+    assert len(ids) == len(set(ids))
+    assert all("/" in mid for mid in ids)
+
+
+def test_open_models_have_metadata():
+    for m in config.OPEN_MODELS:
+        assert m.complexity and m.strength and m.reasoning
+
+
+def test_model_label_composition():
+    assert (
+        config.OPEN_MODELS[0].label
+        == "gpt-oss-120b - frontier, high reasoning, 120B MoE"
+    )
+
+
+def test_model_label_renders_none_as_no_reasoning():
+    llama = next(
+        m for m in config.OPEN_MODELS
+        if m.id == "meta-llama/llama-3.3-70b-instruct"
+    )
+    assert llama.label == "llama-3.3-70b-instruct - strong, no reasoning, 70B dense"

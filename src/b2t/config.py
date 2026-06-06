@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from pydantic import BaseModel
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 REFERENCE_DECK = REPO_ROOT / "files" / "reference" / "touying_reference_presentation.typ"
 MATH_GUIDE = REPO_ROOT / "files" / "md" / "guides" / "math_equations_in_typst.md"
@@ -15,6 +17,40 @@ OPENAI_MODELS = (
     "gpt-5.4-pro",
     "gpt-5.5",
 )
+
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+
+
+class ModelInfo(BaseModel):
+    """One open-source model in the conversion catalog."""
+
+    id: str
+    complexity: str
+    strength: str
+    reasoning: str
+
+    @property
+    def label(self) -> str:
+        """Dropdown label: '<short-name> - <strength>, <reasoning> reasoning, <complexity>'."""
+        short = self.id.split("/", 1)[1]
+        reasoning = "no" if self.reasoning == "none" else self.reasoning
+        return f"{short} - {self.strength}, {reasoning} reasoning, {self.complexity}"
+
+
+# Open-source families US universities most commonly self-host, strongest
+# first. IDs verified against the live OpenRouter API on 2026-06-05.
+OPEN_MODELS = (
+    ModelInfo(id="openai/gpt-oss-120b", complexity="120B MoE", strength="frontier", reasoning="high"),
+    ModelInfo(id="qwen/qwen3-32b", complexity="32B dense", strength="strong", reasoning="hybrid"),
+    ModelInfo(id="meta-llama/llama-3.3-70b-instruct", complexity="70B dense", strength="strong", reasoning="none"),
+    ModelInfo(id="meta-llama/llama-4-scout", complexity="109B MoE", strength="strong", reasoning="none"),
+    ModelInfo(id="google/gemma-4-26b-a4b-it", complexity="26B MoE", strength="capable", reasoning="none"),
+    ModelInfo(id="mistralai/mistral-small-2603", complexity="24B dense", strength="capable", reasoning="none"),
+    ModelInfo(id="openai/gpt-oss-20b", complexity="21B MoE", strength="capable", reasoning="medium"),
+    ModelInfo(id="meta-llama/llama-3.1-8b-instruct", complexity="8B dense", strength="basic", reasoning="none"),
+)
+
+DEFAULT_MODEL = OPEN_MODELS[0].id
 
 BUILD_FILE_EXTENSIONS = (
     # core latex / pdflatex auxiliary
