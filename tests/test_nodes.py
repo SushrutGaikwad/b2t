@@ -85,6 +85,15 @@ def test_convert_node_uses_injected_llm():
     assert update["typst_source"] == "= Converted\n"
 
 
+def test_convert_node_strips_wrapping_code_fence():
+    from b2t.llm import FakeConverter
+    from b2t.nodes.convert import convert_node
+
+    state = _state(stripped_tex="\\section{X}")
+    update = convert_node(state, llm=FakeConverter("```typst\n= Converted\n```"))
+    assert update["typst_source"] == "= Converted\n"
+
+
 def test_convert_node_passes_math_guide():
     from b2t.nodes.convert import convert_node
 
