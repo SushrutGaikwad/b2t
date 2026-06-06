@@ -127,7 +127,7 @@ function commonFields(fd) {
 
 async function loadModels() {
   const sel = $("model");
-  sel.innerHTML = '<option value="">(default)</option>';
+  sel.innerHTML = "";
   try {
     const res = await fetch("/api/models");
     const data = await res.json();
@@ -135,10 +135,11 @@ async function loadModels() {
       const opt = document.createElement("option");
       opt.value = m.id;
       opt.textContent = m.id === data.default ? `${m.label} (default)` : m.label;
+      opt.selected = m.id === data.default;
       sel.appendChild(opt);
     }
   } catch (e) {
-    // leave only the (default) option if the list cannot be fetched
+    // an empty select submits "", which keeps the env/config default chain
   }
 }
 
