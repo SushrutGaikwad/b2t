@@ -69,6 +69,8 @@ only for detected features. Do NOT paste them into this file.
 - files/reference/touying_reference_presentation.typ : the converter's primary
   reference. The converter consults this FIRST, before asking for any package
   docs.
+- files/md/guides/math_equations_in_typst.md : Typst math syntax guide, fed to
+  the convert node alongside the reference deck.
 - files/md/guides/accessibility.md : Typst accessibility docs.
 - files/md/guides/ua-1_accessibility_rules.md : hand-written rules for
   making a Touying deck UA-1 accessible (used by the tagging step).
@@ -85,13 +87,38 @@ only for detected features. Do NOT paste them into this file.
   never touch the network and tests stay cheap.
 - Typst compilation via the `typst` Python package or `typst` CLI. No LaTeX
   dependency.
+- A FastAPI browser UI (src/b2t/api/) is a development and testing harness for
+  exercising the pipeline and inspecting output, not the end-user product; the
+  SaaS UI is roadmap item 7.
+
+## LLM access and prompt versioning
+- All model calls go through the `LLMClient` Protocol
+  (`complete(system, user, model)`) in src/b2t/llm.py. `OpenRouterClient` calls
+  open-weight models via OpenRouter (or any OpenAI-compatible endpoint via
+  `B2T_BASE_URL`); `FakeClient` serves tests and the offline UI checkbox. The
+  model is chosen per call, never stored on the client.
+- Prompts are versioned files at prompts/<node>/<version>.toml (keys:
+  `description`, `system`, `user_template`). Templates use `{{token}}` markers
+  inside literal `'''` TOML strings, so LaTeX/Typst braces and `$` need no
+  escaping. The registry (src/b2t/prompts.py) lists nodes and versions and reads
+  the per-node default from prompts/defaults.json.
+- Every LLM node is a thin wrapper over `run_prompt(state, node_name, client,
+  values)` (src/b2t/nodes/_llm.py): it resolves the node's model and prompt
+  version from `state.llm_choices` (falling back to `B2T_MODEL`/`DEFAULT_MODEL`
+  and the registry default), renders the template, calls the client, and records
+  provenance in `state.llm_runs`. Add a new LLM node by writing a prompt file, a
+  prompts/defaults.json entry, and a thin node; the testing UI exposes per-node
+  model and prompt-version pickers automatically from /api/llm-nodes.
 
 ## Current scope (v0)
 Smallest end-to-end pipeline on PLAIN decks only: title, sections, text,
 bullet lists, basic math, included images. No viz packages, no tagging, no
 HITL, no bibliography yet. Pipeline: copy input, clean build files, detect main
-.tex, flatten, strip overlays, convert with one LLM node, compile-fix loop,
-write output dir. Get a boring deck all the way through before adding anything.
+.tex, flatten, strip overlays, convert with one LLM node, write output dir,
+compile (errors recorded; no retry loop yet). Prompt versioning and per-node
+model + prompt-version selection are already in place as the foundation for the
+multi-LLM roadmap, even though `convert` is still the only LLM node. Get a
+boring deck all the way through before adding anything.
 
 ## Roadmap (one at a time, roughly this order)
 1. v0 plain-deck pipeline above, with tests on a sample fixture.
