@@ -2,7 +2,7 @@ from functools import partial
 
 from langgraph.graph import END, START, StateGraph
 
-from b2t.llm import ConverterLLM
+from b2t.llm import LLMClient
 from b2t.nodes.clean_build import clean_build
 from b2t.nodes.compile import compile_node
 from b2t.nodes.convert import convert_node
@@ -14,11 +14,11 @@ from b2t.nodes.write_output import write_output
 from b2t.state import PipelineState
 
 
-def build_graph(llm: ConverterLLM):
+def build_graph(client: LLMClient):
     """Build and compile the linear v0 conversion graph.
 
     Args:
-        llm: Converter bound into the convert node; every other node is
+        client: LLM client bound into the convert node; every other node is
             deterministic.
 
     Returns:
@@ -33,7 +33,7 @@ def build_graph(llm: ConverterLLM):
     graph.add_node("detect_main", detect_main)
     graph.add_node("flatten", flatten_node)
     graph.add_node("strip_overlays", strip_overlays_node)
-    graph.add_node("convert", partial(convert_node, llm=llm))
+    graph.add_node("convert", partial(convert_node, client=client))
     graph.add_node("write_output", write_output)
     graph.add_node("compile", compile_node)
 

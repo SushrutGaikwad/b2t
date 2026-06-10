@@ -23,7 +23,7 @@ from b2t.graph import build_graph
 from b2t.config import DEFAULT_MODEL, OPEN_MODELS, REPO_ROOT
 from b2t.log import setup_logging
 from b2t.typst_runner import compile_typst
-from b2t.llm import ConverterLLM, FakeConverter, OpenRouterConverter
+from b2t.llm import FakeClient, LLMClient, OpenRouterClient
 
 SAMPLE_DECK = REPO_ROOT / "tests" / "fixtures" / "sample_deck"
 STATIC_DIR = Path(__file__).parent / "static"
@@ -33,19 +33,18 @@ FAKE_TYPST = (
 )
 
 
-def _make_converter(use_fake: bool, model: str) -> ConverterLLM:
-    """Pick the converter for a job.
+def _make_client(use_fake: bool) -> LLMClient:
+    """Pick the client for a job.
 
     Args:
-        use_fake: True for the offline FakeConverter (no network).
-        model: Model id from the dropdown; empty keeps the env/config default.
+        use_fake: True for the offline FakeClient (no network).
 
     Returns:
-        A ConverterLLM ready to be used by the pipeline.
+        An LLMClient ready for the pipeline.
     """
     if use_fake:
-        return FakeConverter(FAKE_TYPST)
-    return OpenRouterConverter(model=model or None)
+        return FakeClient(FAKE_TYPST)
+    return OpenRouterClient()
 
 
 def _safe_target(root: Path, rel: str) -> Path:
@@ -128,7 +127,8 @@ def create_app(store: JobStore | None = None) -> FastAPI:
         logger.info("job {} created for upload ({} files)", job.id, len(files))
         EXECUTOR.submit(
             run_job, jobs, job.id, root, output_dir,
-            lambda: _make_converter(use_fake, model),
+            lambda: _make_client(use_fake),
+            {"convert": {"model": model}} if model else {},
         )
         return JobCreated(job_id=job.id, status=job.status)
 
@@ -140,7 +140,8 @@ def create_app(store: JobStore | None = None) -> FastAPI:
         logger.info("job {} created for the sample deck", job.id)
         EXECUTOR.submit(
             run_job, jobs, job.id, SAMPLE_DECK, output_dir,
-            lambda: _make_converter(use_fake, model),
+            lambda: _make_client(use_fake),
+            {"convert": {"model": model}} if model else {},
         )
         return JobCreated(job_id=job.id, status=job.status)
 
@@ -216,7 +217,7 @@ def create_app(store: JobStore | None = None) -> FastAPI:
     @app.get("/api/graph", response_model=GraphView)
     def get_graph():
         """Return the pipeline topology as a mermaid flowchart definition."""
-        mermaid = build_graph(FakeConverter()).get_graph().draw_mermaid()
+        mermaid = build_graph(FakeClient()).get_graph().draw_mermaid()
         return GraphView(mermaid=mermaid)
 
     app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")

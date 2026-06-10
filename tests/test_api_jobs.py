@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from b2t.api.jobs import JobStore, PIPELINE_NODES, run_job
-from b2t.llm import FakeConverter
+from b2t.llm import FakeClient
 from b2t.typst_runner import typst_available
 
 SAMPLE_DECK = Path(__file__).parent / "fixtures" / "sample_deck"
@@ -11,7 +11,7 @@ def test_run_job_reaches_terminal(tmp_path):
     store = JobStore()
     out = tmp_path / "out"
     job = store.create(input_dir=SAMPLE_DECK, output_dir=out)
-    run_job(store, job.id, SAMPLE_DECK, out, lambda: FakeConverter("= Hi\n"))
+    run_job(store, job.id, SAMPLE_DECK, out, lambda: FakeClient("= Hi\n"))
     rec = store.get(job.id)
     assert rec.status in {"succeeded", "compile_failed", "failed"}
     assert rec.main_tex == "main.tex"
@@ -29,7 +29,7 @@ def test_run_job_records_deterministic_failure(tmp_path):
     (deck / "notes.tex").write_text("just notes", encoding="utf-8")
     store = JobStore()
     job = store.create(input_dir=deck, output_dir=tmp_path / "out")
-    run_job(store, job.id, deck, tmp_path / "out", lambda: FakeConverter("= Hi\n"))
+    run_job(store, job.id, deck, tmp_path / "out", lambda: FakeClient("= Hi\n"))
     rec = store.get(job.id)
     assert rec.status == "failed"
     assert "beamer main" in rec.error
@@ -66,15 +66,14 @@ def test_pipeline_nodes_are_the_eight_in_order():
 
 def test_current_node_tracks_the_running_node(tmp_path):
     # current_node must name the node that is RUNNING, not the last finished one.
-    # The converter spy reads current_node at the moment the convert node runs it.
     store = JobStore()
     job = store.create(input_dir=SAMPLE_DECK, output_dir=tmp_path / "out")
     captured = {}
 
-    class SpyConverter:
-        def convert(self, latex_source, reference, guides=""):
+    class SpyClient:
+        def complete(self, system, user, model):
             captured["during_convert"] = store.get(job.id).current_node
             return "= Hi\n"
 
-    run_job(store, job.id, SAMPLE_DECK, tmp_path / "out", lambda: SpyConverter())
+    run_job(store, job.id, SAMPLE_DECK, tmp_path / "out", lambda: SpyClient())
     assert captured["during_convert"] == "convert"

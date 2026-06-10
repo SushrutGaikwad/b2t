@@ -215,15 +215,13 @@ def test_index_has_graph_container():
     assert '<ul id="nodes"' not in text
 
 
-def test_make_converter_picks_fake_or_openrouter(monkeypatch):
-    from b2t.api.app import _make_converter
-    from b2t.llm import FakeConverter, OpenRouterConverter
+def test_make_client_picks_fake_or_openrouter(monkeypatch):
+    from b2t.api.app import _make_client
+    from b2t.llm import FakeClient, OpenRouterClient
 
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
-    assert isinstance(_make_converter(True, ""), FakeConverter)
-    real = _make_converter(False, "qwen/qwen3-32b")
-    assert isinstance(real, OpenRouterConverter)
-    assert real._model == "qwen/qwen3-32b"
+    assert isinstance(_make_client(True), FakeClient)
+    assert isinstance(_make_client(False), OpenRouterClient)
 
 
 def test_real_job_without_key_records_failed(monkeypatch):

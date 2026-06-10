@@ -4,60 +4,48 @@ from typing import Protocol, runtime_checkable
 from loguru import logger
 from openai import OpenAI
 
-from b2t.config import DEFAULT_MODEL, OPENROUTER_BASE_URL
-
-_INSTRUCTIONS = (
-    "You convert LaTeX Beamer source into a Typst Touying presentation using the "
-    "university theme. Use the provided reference presentation as the canonical "
-    "structure and preamble. Follow the provided guides, especially for writing "
-    "math equations in Typst syntax. Output only Typst source, with no commentary. "
-    "Never use overlays or pause functionality."
-)
+from b2t.config import OPENROUTER_BASE_URL
 
 
 @runtime_checkable
-class ConverterLLM(Protocol):
-    """Interface every converter implements; keeps LLM calls mockable."""
+class LLMClient(Protocol):
+    """Interface every model client implements; keeps LLM calls mockable."""
 
-    def convert(self, latex_source: str, reference: str, guides: str = "") -> str:
-        """Translate Beamer LaTeX into Typst Touying source.
+    def complete(self, system: str, user: str, model: str) -> str:
+        """Run one completion.
 
         Args:
-            latex_source: Flattened, overlay-free Beamer source.
-            reference: The canonical Touying reference presentation.
-            guides: Optional extra guidance (e.g. the Typst math guide).
+            system: The system instruction.
+            user: The fully rendered user message.
+            model: The model id to call.
 
         Returns:
-            Typst source for the converted deck.
+            The model's text output.
         """
         ...
 
 
-class FakeConverter:
-    """Deterministic converter for tests and offline runs; never touches the network."""
+class FakeClient:
+    """Deterministic client for tests and offline runs; never touches the network."""
 
     def __init__(self, output: str = "= Placeholder\n") -> None:
-        """Store the canned Typst source to return from every convert call."""
+        """Store the canned output to return from every complete call."""
         self._output = output
 
-    def convert(self, latex_source: str, reference: str, guides: str = "") -> str:
+    def complete(self, system: str, user: str, model: str) -> str:
         """Return the canned output, ignoring all inputs."""
         return self._output
 
 
-class OpenRouterConverter:
+class OpenRouterClient:
     """Open-source models via OpenRouter's OpenAI-compatible Chat Completions API.
 
     B2T_BASE_URL can point the same code at any OpenAI-compatible endpoint,
-    e.g. a campus vLLM server.
+    e.g. a campus vLLM server. The model is chosen per call.
     """
 
-    def __init__(self, model: str | None = None) -> None:
-        """Create the client and resolve the model.
-
-        Args:
-            model: Model id to use; falls back to the B2T_MODEL env var, then
-                the catalog default.
+    def __init__(self) -> None:
+        """Create the client.
 
         Raises:
             KeyError: If OPENROUTER_API_KEY is not set in the environment.
@@ -66,30 +54,25 @@ class OpenRouterConverter:
             base_url=os.getenv("B2T_BASE_URL", OPENROUTER_BASE_URL),
             api_key=os.environ["OPENROUTER_API_KEY"],
         )
-        self._model = model or os.getenv("B2T_MODEL", DEFAULT_MODEL)
 
-    def convert(self, latex_source: str, reference: str, guides: str = "") -> str:
-        """Send one Chat Completions request translating the deck.
+    def complete(self, system: str, user: str, model: str) -> str:
+        """Send one Chat Completions request.
 
         Args:
-            latex_source: Flattened, overlay-free Beamer source.
-            reference: The canonical Touying reference presentation.
-            guides: Optional extra guidance appended to the prompt.
+            system: The system instruction.
+            user: The fully rendered user message.
+            model: The model id to call.
 
         Returns:
-            The model's Typst source. Network and provider errors propagate
-            to the caller's failure boundary.
+            The model's text output. Network and provider errors propagate to
+            the caller's failure boundary.
         """
-        parts = [f"Reference Touying presentation:\n\n{reference}"]
-        if guides:
-            parts.append(f"Guides:\n\n{guides}")
-        parts.append(f"Convert this Beamer source to a Typst Touying deck:\n\n{latex_source}")
-        logger.info("calling {} via chat completions", self._model)
+        logger.info("calling {} via chat completions", model)
         response = self._client.chat.completions.create(
-            model=self._model,
+            model=model,
             messages=[
-                {"role": "system", "content": _INSTRUCTIONS},
-                {"role": "user", "content": "\n\n".join(parts)},
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
             ],
         )
         return response.choices[0].message.content

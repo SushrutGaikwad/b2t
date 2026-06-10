@@ -8,7 +8,7 @@ from pathlib import Path
 from loguru import logger
 
 from b2t.graph import build_graph
-from b2t.llm import ConverterLLM
+from b2t.llm import LLMClient
 
 PIPELINE_NODES = (
     "copy_input",
@@ -102,7 +102,8 @@ def run_job(
     job_id: str,
     input_dir: Path,
     output_dir: Path,
-    make_converter: Callable[[], ConverterLLM],
+    make_client: Callable[[], LLMClient],
+    choices: dict | None = None,
 ) -> None:
     """Run the conversion graph, updating the job record as each node runs.
 
@@ -110,7 +111,7 @@ def run_job(
     about to run, so the record names the node that is actually running (not the
     last one that finished). Final state is accumulated from the "updates".
 
-    The converter is constructed inside the failure boundary so a missing API
+    The client is constructed inside the failure boundary so a missing API
     key records the job as failed instead of crashing the request handler.
 
     Args:
@@ -118,18 +119,23 @@ def run_job(
         job_id: Id of the record to drive.
         input_dir: Deck directory to convert (treated as read-only).
         output_dir: Directory for main.typ, images, and the PDF.
-        make_converter: Zero-arg factory producing the ConverterLLM.
+        make_client: Zero-arg factory producing the LLMClient.
+        choices: Optional per-node {model, prompt_version} selection.
 
     Returns:
         None. The outcome lands on the job record: succeeded, compile_failed
         (with the compiler's error), or failed (with the exception text).
     """
-    seed = {"input_dir": input_dir, "output_dir": output_dir}
+    seed = {
+        "input_dir": input_dir,
+        "output_dir": output_dir,
+        "llm_choices": choices or {},
+    }
     state = dict(seed)
     store.update(job_id, status="running")
     logger.info("job {} running: {} -> {}", job_id, input_dir, output_dir)
     try:
-        graph = build_graph(make_converter())
+        graph = build_graph(make_client())
         for mode, chunk in graph.stream(seed, stream_mode=["updates", "debug"]):
             if mode == "debug":
                 if chunk.get("type") == "task":

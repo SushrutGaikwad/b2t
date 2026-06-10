@@ -2,21 +2,16 @@ from types import SimpleNamespace
 
 import pytest
 
-from b2t.llm import ConverterLLM, FakeConverter
-
-
-def test_fake_converter_returns_canned_output():
-    fake = FakeConverter("= Typst\n")
-    assert fake.convert(latex_source="x", reference="y") == "= Typst\n"
-
-
-def test_fake_converter_satisfies_protocol():
-    fake = FakeConverter()
-    assert isinstance(fake, ConverterLLM)
-
-
 from b2t.config import DEFAULT_MODEL, OPENROUTER_BASE_URL
-from b2t.llm import _INSTRUCTIONS, OpenRouterConverter
+from b2t.llm import FakeClient, LLMClient, OpenRouterClient
+
+
+def test_fake_client_returns_canned_output():
+    assert FakeClient("= Typst\n").complete("sys", "user", "model") == "= Typst\n"
+
+
+def test_fake_client_satisfies_protocol():
+    assert isinstance(FakeClient(), LLMClient)
 
 
 class _StubClient:
@@ -25,9 +20,7 @@ class _StubClient:
     def __init__(self, **kwargs):
         self.kwargs = kwargs
         self.calls = []
-        self.chat = SimpleNamespace(
-            completions=SimpleNamespace(create=self._create)
-        )
+        self.chat = SimpleNamespace(completions=SimpleNamespace(create=self._create))
 
     def _create(self, **kwargs):
         self.calls.append(kwargs)
@@ -38,7 +31,6 @@ class _StubClient:
 @pytest.fixture
 def stub_client(monkeypatch):
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
-    monkeypatch.delenv("B2T_MODEL", raising=False)
     monkeypatch.delenv("B2T_BASE_URL", raising=False)
     monkeypatch.setattr("b2t.llm.OpenAI", _StubClient)
 
@@ -47,37 +39,25 @@ def test_openrouter_requires_api_key(monkeypatch):
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     monkeypatch.setattr("b2t.llm.OpenAI", _StubClient)
     with pytest.raises(KeyError, match="OPENROUTER_API_KEY"):
-        OpenRouterConverter()
+        OpenRouterClient()
 
 
-def test_openrouter_sends_system_and_composed_user_message(stub_client):
-    conv = OpenRouterConverter()
-    out = conv.convert("SRC", "REF", "GUIDE")
+def test_openrouter_complete_sends_system_user_and_model(stub_client):
+    client = OpenRouterClient()
+    out = client.complete("SYS", "USER", "some/model")
     assert out == "= Deck\n"
-    (call,) = conv._client.calls
-    assert call["model"] == DEFAULT_MODEL
+    (call,) = client._client.calls
+    assert call["model"] == "some/model"
     system, user = call["messages"]
-    assert system == {"role": "system", "content": _INSTRUCTIONS}
-    assert user["role"] == "user"
-    for piece in ("REF", "GUIDE", "SRC"):
-        assert piece in user["content"]
-
-
-def test_openrouter_model_fallback_chain(stub_client, monkeypatch):
-    assert OpenRouterConverter()._model == DEFAULT_MODEL
-    monkeypatch.setenv("B2T_MODEL", "env/model")
-    assert OpenRouterConverter()._model == "env/model"
-    assert OpenRouterConverter(model="arg/model")._model == "arg/model"
+    assert system == {"role": "system", "content": "SYS"}
+    assert user == {"role": "user", "content": "USER"}
 
 
 def test_openrouter_base_url_default_and_override(stub_client, monkeypatch):
-    assert OpenRouterConverter()._client.kwargs["base_url"] == OPENROUTER_BASE_URL
+    assert OpenRouterClient()._client.kwargs["base_url"] == OPENROUTER_BASE_URL
     monkeypatch.setenv("B2T_BASE_URL", "http://cluster.example/v1")
-    assert (
-        OpenRouterConverter()._client.kwargs["base_url"]
-        == "http://cluster.example/v1"
-    )
+    assert OpenRouterClient()._client.kwargs["base_url"] == "http://cluster.example/v1"
 
 
 def test_openrouter_satisfies_protocol(stub_client):
-    assert isinstance(OpenRouterConverter(), ConverterLLM)
+    assert isinstance(OpenRouterClient(), LLMClient)
