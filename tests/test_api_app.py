@@ -354,5 +354,7 @@ def test_index_has_state_inspector_container():
 
 
 def test_index_loads_codemirror_json_mode():
+    # CodeMirror 5 has no separate json mode; the javascript mode covers JSON
+    # (used with json: true), so the inspector loads mode/javascript.
     text = _client().get("/").text
     assert "mode/javascript" in text
