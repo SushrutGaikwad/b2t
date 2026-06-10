@@ -254,6 +254,16 @@ def test_choices_validation_rejects_unknown_version():
     assert res.status_code == 400
 
 
+def test_choices_validation_on_upload_rejects_unknown_node():
+    client = _client()
+    res = client.post(
+        "/api/jobs",
+        data={"use_fake": "true", "choices": '{"nope": {"prompt_version": "v1"}}'},
+        files=_sample_files(),
+    )
+    assert res.status_code == 400
+
+
 def test_sample_job_with_valid_choices_runs_and_reports_provenance():
     client = _client()
     res = client.post(
