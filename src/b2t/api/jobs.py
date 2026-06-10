@@ -7,6 +7,7 @@ from pathlib import Path
 
 from loguru import logger
 
+from b2t.api.state_view import NodeDelta, serialize_values
 from b2t.graph import build_graph
 from b2t.llm import LLMClient
 
@@ -41,6 +42,8 @@ class JobRecord:
         has_typst: True once Typst source has been generated.
         typst_path: Path to the written main.typ, once written.
         pdf_path: Path to the compiled PDF, on success.
+        seed_state: JSON-safe pipeline seed (input/output dirs, choices).
+        node_deltas: Per-node JSON-safe deltas captured as each node finished.
     """
 
     id: str
@@ -57,6 +60,8 @@ class JobRecord:
     pdf_path: Path | None = None
     llm_runs: dict[str, dict] = field(default_factory=dict)
     llm_rendered: dict[str, dict] = field(default_factory=dict)
+    seed_state: dict = field(default_factory=dict)
+    node_deltas: list[NodeDelta] = field(default_factory=list)
 
 
 class JobStore:
@@ -97,6 +102,11 @@ class JobStore:
             job = self._jobs[job_id]
             for key, value in changes.items():
                 setattr(job, key, value)
+
+    def append_delta(self, job_id: str, delta: NodeDelta) -> None:
+        """Append one captured node delta to the job's snapshot trail."""
+        with self._lock:
+            self._jobs[job_id].node_deltas.append(delta)
 
 
 def run_job(

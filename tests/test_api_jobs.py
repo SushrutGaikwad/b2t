@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from b2t.api.jobs import JobStore, PIPELINE_NODES, run_job
+from b2t.api.state_view import NodeDelta
 from b2t.llm import FakeClient
 from b2t.typst_runner import typst_available
 
@@ -102,3 +103,15 @@ def test_run_job_records_rendered_prompt(tmp_path):
     assert "convert" in rec.llm_rendered
     assert "Reference Touying presentation" in rec.llm_rendered["convert"]["user"]
     assert rec.llm_rendered["convert"]["system"]
+
+
+def test_append_delta_accumulates_node_deltas():
+    store = JobStore()
+    job = store.create()
+    store.append_delta(job.id, NodeDelta("copy_input", ["work_dir"], {"work_dir": "/w"}))
+    store.append_delta(
+        job.id, NodeDelta("detect_main", ["main_tex"], {"main_tex": "main.tex"})
+    )
+    rec = store.get(job.id)
+    assert [d.node for d in rec.node_deltas] == ["copy_input", "detect_main"]
+    assert rec.seed_state == {}
