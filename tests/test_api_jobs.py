@@ -115,3 +115,32 @@ def test_append_delta_accumulates_node_deltas():
     rec = store.get(job.id)
     assert [d.node for d in rec.node_deltas] == ["copy_input", "detect_main"]
     assert rec.seed_state == {}
+
+
+def test_run_job_captures_node_deltas(tmp_path):
+    store = JobStore()
+    out = tmp_path / "out"
+    job = store.create(input_dir=SAMPLE_DECK, output_dir=out)
+    run_job(store, job.id, SAMPLE_DECK, out, lambda: FakeClient("= Hi\n"))
+    rec = store.get(job.id)
+    assert [d.node for d in rec.node_deltas] == list(PIPELINE_NODES)
+    convert = next(d for d in rec.node_deltas if d.node == "convert")
+    assert "typst_source" in convert.changed
+    assert "llm_runs" in convert.changed
+    assert "llm_rendered" in convert.changed
+    assert "input_dir" in rec.seed_state
+    assert "output_dir" in rec.seed_state
+
+
+def test_run_job_keeps_partial_deltas_on_failure(tmp_path):
+    deck = tmp_path / "deck"
+    deck.mkdir()
+    (deck / "notes.tex").write_text("just notes", encoding="utf-8")
+    store = JobStore()
+    out = tmp_path / "out"
+    job = store.create(input_dir=deck, output_dir=out)
+    run_job(store, job.id, deck, out, lambda: FakeClient("= Hi\n"))
+    rec = store.get(job.id)
+    assert rec.status == "failed"
+    # detect_main raises, so only the two nodes before it captured a delta.
+    assert [d.node for d in rec.node_deltas] == ["copy_input", "clean_build"]

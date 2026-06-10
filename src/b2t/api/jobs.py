@@ -144,7 +144,7 @@ def run_job(
         "llm_choices": choices or {},
     }
     state = dict(seed)
-    store.update(job_id, status="running")
+    store.update(job_id, status="running", seed_state=serialize_values(seed))
     logger.info("job {} running: {} -> {}", job_id, input_dir, output_dir)
     try:
         graph = build_graph(make_client())
@@ -155,8 +155,12 @@ def run_job(
                     logger.debug("job {} at node {}", job_id, node)
                     store.update(job_id, current_node=node)
             else:
-                for update in chunk.values():
+                for node_name, update in chunk.items():
                     state.update(update)
+                    store.append_delta(
+                        job_id,
+                        NodeDelta(node_name, list(update), serialize_values(update)),
+                    )
     except Exception as exc:
         logger.error("job {} failed: {}", job_id, exc)
         store.update(job_id, status="failed", error=str(exc))
