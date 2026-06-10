@@ -71,6 +71,27 @@ class GraphView(BaseModel):
     mermaid: str
 
 
+class VersionOption(BaseModel):
+    """One prompt-version dropdown entry."""
+
+    id: str
+    label: str
+
+
+class LLMNodeView(BaseModel):
+    """An LLM node with its available prompt versions and default."""
+
+    node: str
+    versions: list[VersionOption]
+    default_version: str
+
+
+class LLMNodesView(BaseModel):
+    """All LLM nodes, for building per-node UI controls."""
+
+    nodes: list[LLMNodeView]
+
+
 def to_view(job: JobRecord) -> JobView:
     """Project a JobRecord onto the public JobView.
 

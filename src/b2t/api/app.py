@@ -13,12 +13,16 @@ from b2t.api.schemas import (
     GraphView,
     JobCreated,
     JobView,
+    LLMNodeView,
+    LLMNodesView,
     ModelOption,
     ModelsView,
     SaveRequest,
     SaveResult,
+    VersionOption,
     to_view,
 )
+from b2t import prompts
 from b2t.graph import build_graph
 from b2t.config import DEFAULT_MODEL, OPEN_MODELS, REPO_ROOT
 from b2t.log import setup_logging
@@ -213,6 +217,24 @@ def create_app(store: JobStore | None = None) -> FastAPI:
             models=[ModelOption(id=m.id, label=m.label) for m in OPEN_MODELS],
             default=DEFAULT_MODEL,
         )
+
+    @app.get("/api/llm-nodes", response_model=LLMNodesView)
+    def get_llm_nodes():
+        """Return each LLM node with its prompt versions and default version."""
+        nodes = []
+        for node in prompts.list_nodes():
+            versions = [
+                VersionOption(id=v, label=prompts.load(node, v).description or v)
+                for v in prompts.list_versions(node)
+            ]
+            nodes.append(
+                LLMNodeView(
+                    node=node,
+                    versions=versions,
+                    default_version=prompts.default_version(node),
+                )
+            )
+        return LLMNodesView(nodes=nodes)
 
     @app.get("/api/graph", response_model=GraphView)
     def get_graph():

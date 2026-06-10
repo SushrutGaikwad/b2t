@@ -232,3 +232,11 @@ def test_real_job_without_key_records_failed(monkeypatch):
     body = _wait_terminal(client, res.json()["job_id"])
     assert body["status"] == "failed"
     assert "OPENROUTER_API_KEY" in body["error"]
+
+
+def test_llm_nodes_endpoint_lists_convert_with_versions():
+    body = _client().get("/api/llm-nodes").json()
+    convert = next(n for n in body["nodes"] if n["node"] == "convert")
+    assert convert["default_version"] == "v1"
+    assert "v1" in [v["id"] for v in convert["versions"]]
+    assert all(v["label"] for v in convert["versions"])
