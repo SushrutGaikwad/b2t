@@ -141,7 +141,7 @@ function buildCard(node) {
 
   const controls = document.createElement("div");
   controls.className = "llm-controls";
-  controls.append("model ", modelSel, " version ", verSel, viewBtn);
+  controls.append("model ", modelSel, " prompt version ", verSel, viewBtn);
   card.appendChild(controls);
 
   const preview = buildPreview(node.node, () => verSel.value);
