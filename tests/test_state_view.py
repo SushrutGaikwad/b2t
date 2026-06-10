@@ -19,6 +19,10 @@ def test_to_jsonsafe_list_of_paths():
     assert to_jsonsafe([Path("a.tex"), Path("b.tex")]) == ["a.tex", "b.tex"]
 
 
+def test_to_jsonsafe_tuple_becomes_list():
+    assert to_jsonsafe((Path("a.tex"), Path("b.tex"))) == ["a.tex", "b.tex"]
+
+
 def test_to_jsonsafe_basemodel():
     run = NodeRun(model="m/x", prompt_version="v1")
     assert to_jsonsafe(run) == {"model": "m/x", "prompt_version": "v1"}

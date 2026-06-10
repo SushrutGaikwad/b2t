@@ -22,7 +22,7 @@ def to_jsonsafe(value: Any) -> Any:
         return [to_jsonsafe(v) for v in value]
     if isinstance(value, dict):
         return {k: to_jsonsafe(v) for k, v in value.items()}
-    if isinstance(value, (str, int, float, bool)) or value is None:
+    if isinstance(value, (bool, str, int, float)) or value is None:
         return value
     return str(value)
 
@@ -44,7 +44,7 @@ class NodeDelta:
 
     node: str
     changed: list[str]
-    values: dict
+    values: dict[str, Any]
 
 
 def fold_snapshot(
