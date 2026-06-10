@@ -29,7 +29,7 @@ iframe { width: 100%; height: 480px; border: 1px solid #e3dbe8; border-radius: 6
 #llm-nodes { margin-top: 0.8rem; display: flex; flex-direction: column; gap: 0.6rem; }
 .llm-card { border: 1px solid #e3dbe8; border-radius: 6px; padding: 0.6rem; }
 .llm-card-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 0.4rem; }
-.llm-controls { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
+.llm-controls { display: flex; flex-direction: column; align-items: flex-start; gap: 0.4rem; }
 .view-prompt { background: #6b5b95; }
 .prompt-preview { margin-top: 0.6rem; }
 .preview-tabs { display: flex; gap: 0.3rem; margin-bottom: 0.3rem; }

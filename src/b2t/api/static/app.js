@@ -139,9 +139,14 @@ function buildCard(node) {
   viewBtn.className = "view-prompt";
   viewBtn.textContent = "view prompt";
 
+  const modelLabel = document.createElement("label");
+  modelLabel.append("model ", modelSel);
+  const versionLabel = document.createElement("label");
+  versionLabel.append("prompt version ", verSel);
+
   const controls = document.createElement("div");
   controls.className = "llm-controls";
-  controls.append("model ", modelSel, " prompt version ", verSel, viewBtn);
+  controls.append(modelLabel, versionLabel, viewBtn);
   card.appendChild(controls);
 
   const preview = buildPreview(node.node, () => verSel.value);
