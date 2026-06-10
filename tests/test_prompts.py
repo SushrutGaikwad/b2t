@@ -1,6 +1,16 @@
+import json
+from pathlib import Path
+
 import pytest
 
-from b2t.prompts import render
+from b2t.prompts import (
+    PromptVersion,
+    default_version,
+    list_nodes,
+    list_versions,
+    load,
+    render,
+)
 
 
 def test_render_replaces_known_tokens():
@@ -20,12 +30,6 @@ def test_render_raises_on_unknown_token():
 def test_render_does_not_rescan_injected_values():
     # an injected value that itself looks like a token is left as-is
     assert render("{{source}}", {"source": "{{reference}}"}) == "{{reference}}"
-
-
-import json
-from pathlib import Path
-
-from b2t.prompts import PromptVersion, default_version, list_nodes, list_versions, load
 
 
 def _make_registry(base: Path) -> None:
