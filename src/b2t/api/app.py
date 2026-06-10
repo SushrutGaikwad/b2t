@@ -20,6 +20,7 @@ from b2t.api.schemas import (
     LLMNodesView,
     ModelOption,
     ModelsView,
+    NodeStateView,
     PromptContentView,
     RenderedPromptView,
     SaveRequest,
@@ -27,6 +28,7 @@ from b2t.api.schemas import (
     VersionOption,
     to_view,
 )
+from b2t.api.state_view import fold_snapshot
 from b2t import prompts
 from b2t.graph import build_graph
 from b2t.config import DEFAULT_MODEL, OPEN_MODELS, REPO_ROOT
@@ -227,6 +229,18 @@ def create_app(store: JobStore | None = None) -> FastAPI:
             system=rendered["system"],
             user=rendered["user"],
         )
+
+    @app.get("/api/jobs/{job_id}/state/{node}", response_model=NodeStateView)
+    def get_node_state(job_id: str, node: str):
+        """Return the accumulated pipeline state after `node` ran. 404 if absent."""
+        job = jobs.get(job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail="unknown job")
+        try:
+            changed, snapshot = fold_snapshot(job.seed_state, job.node_deltas, node)
+        except KeyError:
+            raise HTTPException(status_code=404, detail="node has not run")
+        return NodeStateView(node=node, changed=changed, state=snapshot)
 
     @app.post("/api/jobs/{job_id}/save", response_model=SaveResult)
     def save_job(job_id: str, req: SaveRequest):

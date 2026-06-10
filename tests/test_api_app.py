@@ -318,3 +318,31 @@ def test_rendered_prompt_unknown_node_after_run_returns_404():
     client = _client()
     job_id = _run_sample(client)
     assert client.get(f"/api/jobs/{job_id}/prompt/nope").status_code == 404
+
+
+def test_node_state_available_after_run():
+    client = _client()
+    job_id = _run_sample(client)
+    body = client.get(f"/api/jobs/{job_id}/state/convert").json()
+    assert body["node"] == "convert"
+    assert "typst_source" in body["changed"]
+    assert "stripped_tex" in body["state"]
+    assert "typst_source" in body["state"]
+
+
+def test_jobview_lists_state_nodes_after_run():
+    client = _client()
+    job_id = _run_sample(client)
+    body = client.get(f"/api/jobs/{job_id}").json()
+    assert "convert" in body["state_nodes"]
+    assert "copy_input" in body["state_nodes"]
+
+
+def test_node_state_unknown_job_returns_404():
+    assert _client().get("/api/jobs/does-not-exist/state/convert").status_code == 404
+
+
+def test_node_state_unknown_node_returns_404():
+    client = _client()
+    job_id = _run_sample(client)
+    assert client.get(f"/api/jobs/{job_id}/state/nope").status_code == 404
