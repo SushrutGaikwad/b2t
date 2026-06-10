@@ -17,6 +17,13 @@ class NodeRun(BaseModel):
     prompt_version: str
 
 
+class RenderedPrompt(BaseModel):
+    """The exact system and user message an LLM node sent, for preview."""
+
+    system: str
+    user: str
+
+
 class PipelineState(BaseModel):
     """Single state object threaded through the conversion graph.
 
@@ -45,6 +52,8 @@ class PipelineState(BaseModel):
     # provenance of what actually ran
     llm_choices: dict[str, NodeChoice] = Field(default_factory=dict)
     llm_runs: dict[str, NodeRun] = Field(default_factory=dict)
+    # the exact rendered prompt each LLM node sent (large; never enters JobView)
+    llm_rendered: dict[str, RenderedPrompt] = Field(default_factory=dict)
 
     # conversion (the one LLM step) and the written output
     typst_source: str | None = None

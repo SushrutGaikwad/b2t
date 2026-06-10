@@ -44,3 +44,18 @@ def test_llm_runs_coerce_nested_dicts():
     )
     assert state.llm_runs["convert"].model == "m"
     assert state.llm_runs["convert"].prompt_version == "v1"
+
+
+def test_llm_rendered_defaults_empty():
+    state = PipelineState(input_dir=Path("in"), output_dir=Path("out"))
+    assert state.llm_rendered == {}
+
+
+def test_llm_rendered_coerces_nested_dicts():
+    state = PipelineState(
+        input_dir=Path("in"),
+        output_dir=Path("out"),
+        llm_rendered={"convert": {"system": "S", "user": "U"}},
+    )
+    assert state.llm_rendered["convert"].system == "S"
+    assert state.llm_rendered["convert"].user == "U"
