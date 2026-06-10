@@ -3,6 +3,20 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 
 
+class NodeChoice(BaseModel):
+    """A per-node UI selection. None means use the default."""
+
+    model: str | None = None
+    prompt_version: str | None = None
+
+
+class NodeRun(BaseModel):
+    """What an LLM node actually used, recorded for provenance."""
+
+    model: str
+    prompt_version: str
+
+
 class PipelineState(BaseModel):
     """Single state object threaded through the conversion graph.
 
@@ -26,6 +40,11 @@ class PipelineState(BaseModel):
     image_files: list[Path] = Field(default_factory=list)
     flattened_tex: str | None = None
     stripped_tex: str | None = None
+
+    # per-node model + prompt-version selection (seeded at start) and the
+    # provenance of what actually ran
+    llm_choices: dict[str, NodeChoice] = Field(default_factory=dict)
+    llm_runs: dict[str, NodeRun] = Field(default_factory=dict)
 
     # conversion (the one LLM step) and the written output
     typst_source: str | None = None
