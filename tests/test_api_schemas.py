@@ -1,5 +1,5 @@
 from b2t.api.jobs import JobRecord
-from b2t.api.schemas import to_view
+from b2t.api.schemas import JobView, to_view
 
 
 def test_to_view_maps_fields():
@@ -36,3 +36,9 @@ def test_to_view_maps_llm_runs():
     view = to_view(rec)
     assert view.llm_runs["convert"].model == "m/x"
     assert view.llm_runs["convert"].prompt_version == "v1"
+
+
+def test_job_view_excludes_rendered_prompt():
+    # Rendered prompts are large; they must stay out of the per-second polled
+    # JobView and be served only by the dedicated lazy prompt endpoint.
+    assert "llm_rendered" not in JobView.model_fields
