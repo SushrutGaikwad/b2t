@@ -56,6 +56,7 @@ class JobRecord:
     typst_path: Path | None = None
     pdf_path: Path | None = None
     llm_runs: dict[str, dict] = field(default_factory=dict)
+    llm_rendered: dict[str, dict] = field(default_factory=dict)
 
 
 class JobStore:
@@ -153,6 +154,7 @@ def run_job(
 
     main_tex = state.get("main_tex")
     runs = state.get("llm_runs", {})
+    rendered = state.get("llm_rendered", {})
     store.update(
         job_id,
         main_tex=main_tex.name if main_tex else None,
@@ -163,6 +165,10 @@ def run_job(
         llm_runs={
             node: {"model": run.model, "prompt_version": run.prompt_version}
             for node, run in runs.items()
+        },
+        llm_rendered={
+            node: {"system": r.system, "user": r.user}
+            for node, r in rendered.items()
         },
     )
     if state.get("compiled"):

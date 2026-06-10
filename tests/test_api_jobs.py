@@ -91,3 +91,14 @@ def test_run_job_records_llm_runs(tmp_path):
         "model": DEFAULT_MODEL,
         "prompt_version": "v1",
     }
+
+
+def test_run_job_records_rendered_prompt(tmp_path):
+    store = JobStore()
+    out = tmp_path / "out"
+    job = store.create(input_dir=SAMPLE_DECK, output_dir=out)
+    run_job(store, job.id, SAMPLE_DECK, out, lambda: FakeClient("= Hi\n"))
+    rec = store.get(job.id)
+    assert "convert" in rec.llm_rendered
+    assert "Reference Touying presentation" in rec.llm_rendered["convert"]["user"]
+    assert rec.llm_rendered["convert"]["system"]
