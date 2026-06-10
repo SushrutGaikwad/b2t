@@ -312,12 +312,9 @@ async function start(url, fd) {
   setSource("");
   $("error").textContent = "(none)";
   $("pdf").src = "about:blank";
-  $("state-inspector").textContent = "";
+  hideInspector();
   stateNodes = [];
   markInspectable();
-  if (graphNodes) {
-    for (const box of Object.values(graphNodes)) box.classList.remove("selected");
-  }
   const res = await fetch(url, { method: "POST", body: fd });
   const data = await res.json();
   poll(data.job_id);
@@ -354,7 +351,8 @@ $("download").addEventListener("click", () => {
 });
 
 // ----- per-node state inspector -----
-const STATE_PREVIEW = 500;
+let inspectedNode = null;   // node whose snapshot is shown, or null
+let stateViewer = null;     // lazy read-only CodeMirror json viewer
 
 function markInspectable() {
   if (!graphNodes) return;
@@ -363,94 +361,90 @@ function markInspectable() {
   }
 }
 
-async function inspectNode(node) {
-  if (!currentJobId || !stateNodes.includes(node)) return;
+function selectNode(node) {
+  if (!graphNodes) return;
+  for (const box of Object.values(graphNodes)) box.classList.remove("selected");
+  if (graphNodes[node]) graphNodes[node].classList.add("selected");
+}
+
+function ensureInspector() {
+  const panel = $("state-inspector");
+  if (panel.dataset.built) return;
+  panel.dataset.built = "1";
+
+  const header = document.createElement("div");
+  header.className = "inspector-header";
+  const title = document.createElement("span");
+  title.className = "inspector-title";
+  title.id = "inspector-title";
+  const hide = document.createElement("button");
+  hide.type = "button";
+  hide.className = "inspector-hide";
+  hide.textContent = "hide";
+  hide.addEventListener("click", hideInspector);
+  header.append(title, hide);
+
+  const changed = document.createElement("div");
+  changed.className = "inspector-changed";
+  changed.id = "inspector-changed";
+
+  const viewer = document.createElement("div");
+  viewer.id = "inspector-viewer";
+
+  panel.append(header, changed, viewer);
+
+  if (window.CodeMirror) {
+    stateViewer = CodeMirror(viewer, {
+      mode: { name: "javascript", json: true },
+      theme: "material-darker",
+      lineWrapping: true,
+      readOnly: true,
+    });
+  }
+}
+
+function setViewer(text) {
+  if (stateViewer) {
+    stateViewer.setValue(text);
+    stateViewer.refresh();
+  } else {
+    $("inspector-viewer").textContent = text;
+  }
+}
+
+function hideInspector() {
+  $("state-inspector").hidden = true;
+  inspectedNode = null;
   if (graphNodes) {
     for (const box of Object.values(graphNodes)) box.classList.remove("selected");
-    if (graphNodes[node]) graphNodes[node].classList.add("selected");
   }
+}
+
+async function inspectNode(node) {
+  if (!currentJobId || !stateNodes.includes(node)) return;
   const panel = $("state-inspector");
-  panel.textContent = "loading...";
+  if (inspectedNode === node && !panel.hidden) {
+    hideInspector();
+    return;
+  }
+  ensureInspector();
+  selectNode(node);
+  inspectedNode = node;
+  panel.hidden = false;
+  $("inspector-title").textContent = `State after: ${node}`;
+  $("inspector-changed").textContent = "loading...";
+  setViewer("");
   try {
     const r = await fetch(`/api/jobs/${currentJobId}/state/${node}`);
     if (!r.ok) throw new Error();
-    renderInspector(panel, await r.json());
+    const data = await r.json();
+    $("inspector-changed").textContent =
+      "changed: " + (data.changed.join(", ") || "(nothing)");
+    setViewer(JSON.stringify(data.state, null, 2));
   } catch (e) {
-    panel.textContent = "(failed to load state)";
+    $("inspector-changed").textContent = "(failed to load state)";
+    setViewer("");
   }
-}
-
-function renderInspector(panel, data) {
-  panel.innerHTML = "";
-  const title = document.createElement("div");
-  title.className = "inspector-title";
-  title.textContent = `State after: ${data.node}`;
-  const changed = document.createElement("div");
-  changed.className = "inspector-changed";
-  changed.textContent = "changed: " + (data.changed.join(", ") || "(nothing)");
-  panel.append(title, changed);
-  for (const key of Object.keys(data.state).sort()) {
-    const row = document.createElement("div");
-    row.className = "state-field" + (data.changed.includes(key) ? " is-changed" : "");
-    const k = document.createElement("span");
-    k.className = "state-key";
-    k.textContent = key + ": ";
-    row.append(k, renderValue(data.state[key]));
-    panel.appendChild(row);
-  }
-}
-
-function renderValue(v) {
-  if (typeof v === "string") return renderString(v);
-  if (Array.isArray(v)) {
-    const span = document.createElement("span");
-    span.textContent = JSON.stringify(v);
-    return span;
-  }
-  if (v && typeof v === "object") {
-    const box = document.createElement("div");
-    box.className = "state-object";
-    for (const [kk, vv] of Object.entries(v)) {
-      const row = document.createElement("div");
-      row.className = "state-subfield";
-      const k = document.createElement("span");
-      k.className = "state-key";
-      k.textContent = kk + ": ";
-      row.append(k, renderValue(vv));
-      box.appendChild(row);
-    }
-    return box;
-  }
-  const span = document.createElement("span");
-  span.textContent = String(v);
-  return span;
-}
-
-function renderString(s) {
-  const span = document.createElement("span");
-  span.className = "state-string";
-  if (s.length <= STATE_PREVIEW) {
-    span.textContent = s;
-    return span;
-  }
-  const body = document.createElement("span");
-  body.textContent = s.slice(0, STATE_PREVIEW);
-  const meta = document.createElement("span");
-  meta.className = "state-meta";
-  meta.textContent = ` ... (${s.length} chars) `;
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "expand";
-  btn.textContent = "expand";
-  let expanded = false;
-  btn.addEventListener("click", () => {
-    expanded = !expanded;
-    body.textContent = expanded ? s : s.slice(0, STATE_PREVIEW);
-    meta.textContent = expanded ? ` (${s.length} chars) ` : ` ... (${s.length} chars) `;
-    btn.textContent = expanded ? "collapse" : "expand";
-  });
-  span.append(body, meta, btn);
-  return span;
 }
 
 loadGraph();

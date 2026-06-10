@@ -41,15 +41,11 @@ iframe { width: 100%; height: 480px; border: 1px solid #e3dbe8; border-radius: 6
 
 /* state inspector */
 #state-inspector { margin-top: 0.8rem; }
-#state-inspector:empty { display: none; }
 #graph .node.inspectable { cursor: pointer; }
 #graph .node.selected { outline: 2px solid #cc3399; outline-offset: 1px; }
-.inspector-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 0.3rem; }
+.inspector-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem; }
+.inspector-title { font-weight: 600; font-size: 0.9rem; }
+.inspector-hide { background: #6b5b95; padding: 0.1rem 0.5rem; font-size: 0.75rem; }
 .inspector-changed { font-size: 0.8rem; color: #cc3399; margin-bottom: 0.5rem; }
-.state-field { font-family: ui-monospace, monospace; font-size: 0.8rem; padding: 0.15rem 0; border-bottom: 1px solid #efeaf3; }
-.state-field.is-changed { background: #fff4fb; }
-.state-key { color: #6b5b95; }
-.state-string { white-space: pre-wrap; word-break: break-word; }
-.state-object, .state-subfield { margin-left: 1rem; }
-.state-meta { color: #888; }
-button.expand { background: #6b5b95; padding: 0.05rem 0.4rem; font-size: 0.7rem; }
+#inspector-viewer { white-space: pre-wrap; word-break: break-word; font-family: ui-monospace, monospace; font-size: 0.8rem; }
+#state-inspector .CodeMirror { height: auto; max-height: 360px; }
