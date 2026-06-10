@@ -15,8 +15,9 @@ def convert_node(state: PipelineState, client: LLMClient) -> dict:
         client: LLM client (bound via functools.partial when the graph is built).
 
     Returns:
-        State update with typst_source (any wrapping code fence removed) and the
-        node's provenance merged into llm_runs.
+        State update with typst_source (any wrapping code fence removed), the
+        node's provenance merged into llm_runs, and the rendered prompt merged
+        into llm_rendered.
     """
     reference = REFERENCE_DECK.read_text(encoding="utf-8")
     guides = MATH_GUIDE.read_text(encoding="utf-8")
