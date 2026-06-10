@@ -300,3 +300,22 @@ def test_prompt_content_unknown_node_returns_404():
 
 def test_prompt_content_unknown_version_returns_404():
     assert _client().get("/api/prompts/convert/v999").status_code == 404
+
+
+def test_rendered_prompt_available_after_run():
+    client = _client()
+    job_id = _run_sample(client)
+    body = client.get(f"/api/jobs/{job_id}/prompt/convert").json()
+    assert body["prompt_version"] == "v1"
+    assert "You convert LaTeX Beamer" in body["system"]
+    assert "Reference Touying presentation" in body["user"]
+
+
+def test_rendered_prompt_unknown_job_returns_404():
+    assert _client().get("/api/jobs/does-not-exist/prompt/convert").status_code == 404
+
+
+def test_rendered_prompt_unknown_node_after_run_returns_404():
+    client = _client()
+    job_id = _run_sample(client)
+    assert client.get(f"/api/jobs/{job_id}/prompt/nope").status_code == 404

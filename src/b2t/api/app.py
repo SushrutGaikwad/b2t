@@ -21,6 +21,7 @@ from b2t.api.schemas import (
     ModelOption,
     ModelsView,
     PromptContentView,
+    RenderedPromptView,
     SaveRequest,
     SaveResult,
     VersionOption,
@@ -210,6 +211,22 @@ def create_app(store: JobStore | None = None) -> FastAPI:
         if job is None or job.pdf_path is None or not Path(job.pdf_path).exists():
             raise HTTPException(status_code=404, detail="no pdf output")
         return FileResponse(Path(job.pdf_path), media_type="application/pdf")
+
+    @app.get("/api/jobs/{job_id}/prompt/{node}", response_model=RenderedPromptView)
+    def get_rendered_prompt(job_id: str, node: str):
+        """Return the exact prompt a node sent on this job's run. 404 if absent."""
+        job = jobs.get(job_id)
+        if job is None or node not in job.llm_rendered:
+            raise HTTPException(status_code=404, detail="no rendered prompt")
+        rendered = job.llm_rendered[node]
+        run = job.llm_runs.get(node, {})
+        return RenderedPromptView(
+            node=node,
+            model=run.get("model", ""),
+            prompt_version=run.get("prompt_version", ""),
+            system=rendered["system"],
+            user=rendered["user"],
+        )
 
     @app.post("/api/jobs/{job_id}/save", response_model=SaveResult)
     def save_job(job_id: str, req: SaveRequest):

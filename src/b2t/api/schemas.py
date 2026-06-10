@@ -96,6 +96,16 @@ class PromptContentView(BaseModel):
     user_template: str
 
 
+class RenderedPromptView(BaseModel):
+    """The exact prompt an LLM node sent on the most recent run."""
+
+    node: str
+    model: str
+    prompt_version: str
+    system: str
+    user: str
+
+
 class VersionOption(BaseModel):
     """One prompt-version dropdown entry."""
 
