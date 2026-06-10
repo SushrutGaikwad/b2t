@@ -5,7 +5,7 @@ import os
 from b2t import prompts
 from b2t.config import DEFAULT_MODEL
 from b2t.llm import LLMClient
-from b2t.state import NodeChoice, NodeRun, PipelineState
+from b2t.state import NodeChoice, NodeRun, PipelineState, RenderedPrompt
 
 
 def run_prompt(
@@ -13,7 +13,7 @@ def run_prompt(
     node_name: str,
     client: LLMClient,
     values: dict[str, str],
-) -> tuple[str, NodeRun]:
+) -> tuple[str, NodeRun, RenderedPrompt]:
     """Resolve the node's selection, render its prompt, and call the client.
 
     Args:
@@ -23,7 +23,8 @@ def run_prompt(
         values: Token values for the user-message template.
 
     Returns:
-        The model output and a NodeRun recording the model and version used.
+        The model output, a NodeRun recording the model and version used, and a
+        RenderedPrompt holding the exact system and user message sent.
         The model falls back to B2T_MODEL then DEFAULT_MODEL; the version falls
         back to the registry default.
     """
@@ -33,4 +34,6 @@ def run_prompt(
     pv = prompts.load(node_name, version)
     user = prompts.render(pv.user_template, values)
     output = client.complete(pv.system, user, model)
-    return output, NodeRun(model=model, prompt_version=version)
+    run = NodeRun(model=model, prompt_version=version)
+    rendered = RenderedPrompt(system=pv.system, user=user)
+    return output, run, rendered

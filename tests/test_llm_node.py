@@ -17,9 +17,11 @@ _VALUES = {"reference": "R", "guides": "G", "source": "SRC"}
 
 def test_run_prompt_uses_defaults_and_returns_run(monkeypatch):
     monkeypatch.delenv("B2T_MODEL", raising=False)
-    out, run = run_prompt(_state(), "convert", FakeClient("OUT"), _VALUES)
+    out, run, rendered = run_prompt(_state(), "convert", FakeClient("OUT"), _VALUES)
     assert out == "OUT"
     assert run == NodeRun(model=DEFAULT_MODEL, prompt_version="v1")
+    assert "SRC" in rendered.user
+    assert rendered.system
 
 
 def test_run_prompt_honors_choice_model_and_renders_user(monkeypatch):
@@ -33,14 +35,15 @@ def test_run_prompt_honors_choice_model_and_renders_user(monkeypatch):
             captured["user"] = user
             return "OK"
 
-    out, run = run_prompt(state, "convert", Spy(), _VALUES)
+    out, run, rendered = run_prompt(state, "convert", Spy(), _VALUES)
     assert captured["model"] == "x/y"
     assert "SRC" in captured["user"]
     assert run.model == "x/y"
     assert run.prompt_version == "v1"
+    assert rendered.user == captured["user"]
 
 
 def test_run_prompt_falls_back_to_b2t_model_env(monkeypatch):
     monkeypatch.setenv("B2T_MODEL", "env/model")
-    _, run = run_prompt(_state(), "convert", FakeClient("OUT"), _VALUES)
+    _, run, _ = run_prompt(_state(), "convert", FakeClient("OUT"), _VALUES)
     assert run.model == "env/model"
