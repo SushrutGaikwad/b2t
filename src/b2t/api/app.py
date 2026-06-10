@@ -20,6 +20,7 @@ from b2t.api.schemas import (
     LLMNodesView,
     ModelOption,
     ModelsView,
+    PromptContentView,
     SaveRequest,
     SaveResult,
     VersionOption,
@@ -272,6 +273,22 @@ def create_app(store: JobStore | None = None) -> FastAPI:
                 )
             )
         return LLMNodesView(nodes=nodes)
+
+    @app.get("/api/prompts/{node}/{version}", response_model=PromptContentView)
+    def get_prompt_content(node: str, version: str):
+        """Return a prompt version's system and user_template (read-only preview)."""
+        if node not in prompts.list_nodes():
+            raise HTTPException(status_code=404, detail="unknown LLM node")
+        if version not in prompts.list_versions(node):
+            raise HTTPException(status_code=404, detail="unknown prompt version")
+        pv = prompts.load(node, version)
+        return PromptContentView(
+            node=node,
+            version=version,
+            description=pv.description,
+            system=pv.system,
+            user_template=pv.user_template,
+        )
 
     @app.get("/api/graph", response_model=GraphView)
     def get_graph():

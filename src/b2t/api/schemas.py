@@ -86,6 +86,16 @@ class GraphView(BaseModel):
     edges: list[GraphEdge]
 
 
+class PromptContentView(BaseModel):
+    """A prompt version's raw content for the template preview."""
+
+    node: str
+    version: str
+    description: str
+    system: str
+    user_template: str
+
+
 class VersionOption(BaseModel):
     """One prompt-version dropdown entry."""
 

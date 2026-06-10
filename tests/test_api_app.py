@@ -284,3 +284,19 @@ def test_index_has_llm_nodes_container():
     text = _client().get("/").text
     assert '<div id="llm-nodes"' in text
     assert '<select id="model"' not in text
+
+
+def test_prompt_content_endpoint_returns_template():
+    body = _client().get("/api/prompts/convert/v1").json()
+    assert body["node"] == "convert"
+    assert body["version"] == "v1"
+    assert "You convert LaTeX Beamer" in body["system"]
+    assert "{{source}}" in body["user_template"]
+
+
+def test_prompt_content_unknown_node_returns_404():
+    assert _client().get("/api/prompts/nope/v1").status_code == 404
+
+
+def test_prompt_content_unknown_version_returns_404():
+    assert _client().get("/api/prompts/convert/v999").status_code == 404
