@@ -65,10 +65,25 @@ class ModelsView(BaseModel):
     default: str
 
 
-class GraphView(BaseModel):
-    """The pipeline topology as a mermaid flowchart definition."""
+class GraphNode(BaseModel):
+    """One pipeline node: its name and whether it is an LLM node."""
 
-    mermaid: str
+    name: str
+    is_llm: bool
+
+
+class GraphEdge(BaseModel):
+    """A directed edge between two pipeline nodes."""
+
+    source: str
+    target: str
+
+
+class GraphView(BaseModel):
+    """The pipeline topology: nodes (with is_llm) and directed edges."""
+
+    nodes: list[GraphNode]
+    edges: list[GraphEdge]
 
 
 class VersionOption(BaseModel):

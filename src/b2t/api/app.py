@@ -11,6 +11,8 @@ from loguru import logger
 
 from b2t.api.jobs import EXECUTOR, JobStore, run_job
 from b2t.api.schemas import (
+    GraphEdge,
+    GraphNode,
     GraphView,
     JobCreated,
     JobView,
@@ -273,9 +275,25 @@ def create_app(store: JobStore | None = None) -> FastAPI:
 
     @app.get("/api/graph", response_model=GraphView)
     def get_graph():
-        """Return the pipeline topology as a mermaid flowchart definition."""
-        mermaid = build_graph(FakeClient()).get_graph().draw_mermaid()
-        return GraphView(mermaid=mermaid)
+        """Return the pipeline topology (nodes with is_llm, plus edges).
+
+        Derived from the real compiled graph, so it cannot drift from the
+        pipeline; a node is an LLM node when its name is in the prompt registry.
+        """
+        graph = build_graph(FakeClient()).get_graph()
+        llm = set(prompts.list_nodes())
+        skip = {"__start__", "__end__"}
+        nodes = [
+            GraphNode(name=name, is_llm=name in llm)
+            for name in graph.nodes
+            if name not in skip
+        ]
+        edges = [
+            GraphEdge(source=e.source, target=e.target)
+            for e in graph.edges
+            if e.source not in skip and e.target not in skip
+        ]
+        return GraphView(nodes=nodes, edges=edges)
 
     app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
     return app

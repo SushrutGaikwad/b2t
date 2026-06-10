@@ -195,11 +195,16 @@ def test_models_endpoint_lists_open_models_with_labels():
     assert body["default"] in {m["id"] for m in body["models"]}
 
 
-def test_graph_endpoint_returns_mermaid():
+def test_graph_endpoint_returns_structured_topology():
     body = _client().get("/api/graph").json()
-    assert "graph" in body["mermaid"].lower()
-    for name in ("copy_input", "convert", "compile"):
-        assert name in body["mermaid"]
+    names = [n["name"] for n in body["nodes"]]
+    assert "copy_input" in names and "convert" in names and "compile" in names
+    assert "__start__" not in names and "__end__" not in names
+    convert = next(n for n in body["nodes"] if n["name"] == "convert")
+    assert convert["is_llm"] is True
+    copy = next(n for n in body["nodes"] if n["name"] == "copy_input")
+    assert copy["is_llm"] is False
+    assert body["edges"]
 
 
 def test_index_has_graph_container():
