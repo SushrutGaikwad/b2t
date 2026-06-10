@@ -42,3 +42,28 @@ def test_job_view_excludes_rendered_prompt():
     # Rendered prompts are large; they must stay out of the per-second polled
     # JobView and be served only by the dedicated lazy prompt endpoint.
     assert "llm_rendered" not in JobView.model_fields
+
+
+def test_node_state_view_shape():
+    from b2t.api.schemas import NodeStateView
+
+    v = NodeStateView(
+        node="convert", changed=["typst_source"], state={"compiled": False}
+    )
+    assert v.node == "convert"
+    assert v.changed == ["typst_source"]
+    assert v.state["compiled"] is False
+
+
+def test_to_view_includes_state_nodes():
+    from b2t.api.state_view import NodeDelta
+
+    rec = JobRecord(
+        id="abc",
+        status="running",
+        node_deltas=[
+            NodeDelta("copy_input", ["work_dir"], {"work_dir": "/w"}),
+            NodeDelta("clean_build", ["removed_build_files"], {"removed_build_files": []}),
+        ],
+    )
+    assert to_view(rec).state_nodes == ["copy_input", "clean_build"]

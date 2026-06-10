@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -36,6 +37,7 @@ class JobView(BaseModel):
     has_typst: bool
     has_pdf: bool
     llm_runs: dict[str, NodeRunView] = {}
+    state_nodes: list[str] = []
 
 
 class SaveRequest(BaseModel):
@@ -106,6 +108,14 @@ class RenderedPromptView(BaseModel):
     user: str
 
 
+class NodeStateView(BaseModel):
+    """The accumulated pipeline state after a node ran, with its changes."""
+
+    node: str
+    changed: list[str]
+    state: dict[str, Any]
+
+
 class VersionOption(BaseModel):
     """One prompt-version dropdown entry."""
 
@@ -151,4 +161,5 @@ def to_view(job: JobRecord) -> JobView:
         llm_runs={
             node: NodeRunView(**run) for node, run in job.llm_runs.items()
         },
+        state_nodes=[d.node for d in job.node_deltas],
     )
