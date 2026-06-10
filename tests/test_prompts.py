@@ -93,3 +93,6 @@ def test_real_convert_v1_is_default_and_loadable():
     assert "Never use overlays" in pv.system
     for token in ("{{reference}}", "{{guides}}", "{{source}}"):
         assert token in pv.user_template
+    # the migrated user message must end exactly at the source, no trailing
+    # newline, so it stays byte-identical to the old assembly
+    assert pv.user_template.endswith("{{source}}")
