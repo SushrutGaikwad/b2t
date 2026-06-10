@@ -352,7 +352,6 @@ $("download").addEventListener("click", () => {
 
 // ----- per-node state inspector -----
 let inspectedNode = null;   // node whose snapshot is shown, or null
-let stateViewer = null;     // lazy read-only CodeMirror json viewer
 
 function markInspectable() {
   if (!graphNodes) return;
@@ -392,24 +391,33 @@ function ensureInspector() {
   viewer.id = "inspector-viewer";
 
   panel.append(header, changed, viewer);
+}
 
-  if (window.CodeMirror) {
-    stateViewer = CodeMirror(viewer, {
-      mode: { name: "javascript", json: true },
-      theme: "material-darker",
-      lineWrapping: true,
-      readOnly: true,
-    });
-  }
+// Color JSON tokens after HTML-escaping, so model/deck text can never inject
+// markup. The viewer scrolls natively, so any snapshot size reaches the bottom.
+function highlightJson(json) {
+  const escaped = json
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  return escaped.replace(
+    /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g,
+    (match) => {
+      let cls = "json-number";
+      if (match[0] === '"') {
+        cls = match.slice(-1) === ":" ? "json-key" : "json-string";
+      } else if (match === "true" || match === "false") {
+        cls = "json-boolean";
+      } else if (match === "null") {
+        cls = "json-null";
+      }
+      return `<span class="${cls}">${match}</span>`;
+    }
+  );
 }
 
 function setViewer(text) {
-  if (stateViewer) {
-    stateViewer.setValue(text);
-    stateViewer.refresh();
-  } else {
-    $("inspector-viewer").textContent = text;
-  }
+  $("inspector-viewer").innerHTML = highlightJson(text);
 }
 
 function hideInspector() {
