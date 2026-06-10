@@ -7,6 +7,7 @@ from pydantic import BaseModel
 REPO_ROOT = Path(__file__).resolve().parents[2]
 REFERENCE_DECK = REPO_ROOT / "files" / "reference" / "touying_reference_presentation.typ"
 MATH_GUIDE = REPO_ROOT / "files" / "md" / "guides" / "math_equations_in_typst.md"
+PROMPTS_DIR = REPO_ROOT / "prompts"
 
 DEFAULT_TYPST_NAME = "main.typ"
 

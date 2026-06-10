@@ -20,3 +20,62 @@ def test_render_raises_on_unknown_token():
 def test_render_does_not_rescan_injected_values():
     # an injected value that itself looks like a token is left as-is
     assert render("{{source}}", {"source": "{{reference}}"}) == "{{reference}}"
+
+
+import json
+from pathlib import Path
+
+from b2t.prompts import PromptVersion, default_version, list_nodes, list_versions, load
+
+
+def _make_registry(base: Path) -> None:
+    (base / "convert").mkdir(parents=True)
+    (base / "convert" / "v1.toml").write_text(
+        'description = "first"\n'
+        "system = '''Sys one'''\n"
+        "user_template = '''U {{source}}'''\n",
+        encoding="utf-8",
+    )
+    (base / "convert" / "v2.toml").write_text(
+        "system = '''Sys two'''\n"
+        "user_template = '''U2 {{source}}'''\n",
+        encoding="utf-8",
+    )
+    (base / "defaults.json").write_text(json.dumps({"convert": "v1"}), encoding="utf-8")
+
+
+def test_list_nodes_and_versions(tmp_path):
+    _make_registry(tmp_path)
+    assert list_nodes(base=tmp_path) == ["convert"]
+    assert list_versions("convert", base=tmp_path) == ["v1", "v2"]
+
+
+def test_default_version(tmp_path):
+    _make_registry(tmp_path)
+    assert default_version("convert", base=tmp_path) == "v1"
+
+
+def test_load_returns_prompt_version(tmp_path):
+    _make_registry(tmp_path)
+    pv = load("convert", "v1", base=tmp_path)
+    assert isinstance(pv, PromptVersion)
+    assert pv.system == "Sys one"
+    assert pv.user_template == "U {{source}}"
+    assert pv.description == "first"
+
+
+def test_load_missing_description_defaults_empty(tmp_path):
+    _make_registry(tmp_path)
+    assert load("convert", "v2", base=tmp_path).description == ""
+
+
+def test_load_missing_version_raises(tmp_path):
+    _make_registry(tmp_path)
+    with pytest.raises(FileNotFoundError):
+        load("convert", "v9", base=tmp_path)
+
+
+def test_default_version_unknown_node_raises(tmp_path):
+    _make_registry(tmp_path)
+    with pytest.raises(KeyError):
+        default_version("nope", base=tmp_path)
