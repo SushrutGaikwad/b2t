@@ -279,7 +279,6 @@ function refreshPdf(id, hasPdf) {
 
 async function finish(id, job) {
   setBusy(false);
-  currentJobId = id;
   const typ = await fetch(`/api/jobs/${id}/typ`);
   setSource(typ.ok ? await typ.text() : "");
   refreshPdf(id, job.has_pdf);
@@ -313,6 +312,12 @@ async function start(url, fd) {
   setSource("");
   $("error").textContent = "(none)";
   $("pdf").src = "about:blank";
+  $("state-inspector").textContent = "";
+  stateNodes = [];
+  markInspectable();
+  if (graphNodes) {
+    for (const box of Object.values(graphNodes)) box.classList.remove("selected");
+  }
   const res = await fetch(url, { method: "POST", body: fd });
   const data = await res.json();
   poll(data.job_id);
