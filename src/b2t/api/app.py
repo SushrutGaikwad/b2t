@@ -219,11 +219,11 @@ def create_app(store: JobStore | None = None) -> FastAPI:
         if job is None or node not in job.llm_rendered:
             raise HTTPException(status_code=404, detail="no rendered prompt")
         rendered = job.llm_rendered[node]
-        run = job.llm_runs.get(node, {})
+        run = job.llm_runs[node]
         return RenderedPromptView(
             node=node,
-            model=run.get("model", ""),
-            prompt_version=run.get("prompt_version", ""),
+            model=run["model"],
+            prompt_version=run["prompt_version"],
             system=rendered["system"],
             user=rendered["user"],
         )

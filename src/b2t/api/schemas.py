@@ -97,7 +97,7 @@ class PromptContentView(BaseModel):
 
 
 class RenderedPromptView(BaseModel):
-    """The exact prompt an LLM node sent on the most recent run."""
+    """The exact prompt an LLM node sent on a specific job's run."""
 
     node: str
     model: str
