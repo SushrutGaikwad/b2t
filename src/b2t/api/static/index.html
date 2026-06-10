@@ -20,7 +20,6 @@
       <div class="options">
         <label><input type="checkbox" id="use-fake" /> use fake converter (offline)</label>
       </div>
-      <div id="llm-nodes"></div>
       <div class="actions">
         <button id="run">Convert folder</button>
         <button id="run-sample" type="button">Use sample deck</button>
@@ -30,6 +29,7 @@
     <section class="status">
       <span id="badge" class="badge">idle</span>
       <div id="graph"></div>
+      <div id="llm-nodes"></div>
       <div id="provenance"></div>
     </section>
 
@@ -48,11 +48,6 @@
   </main>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/mode/simple.min.js"></script>
-  <script type="module">
-    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.12.0/dist/mermaid.esm.min.mjs";
-    window.mermaid = mermaid;
-    document.dispatchEvent(new Event("mermaid-ready"));
-  </script>
   <script src="/app.js"></script>
 </body>
 </html>

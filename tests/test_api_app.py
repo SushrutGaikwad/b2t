@@ -210,8 +210,7 @@ def test_graph_endpoint_returns_structured_topology():
 def test_index_has_graph_container():
     text = _client().get("/").text
     assert '<div id="graph"' in text
-    assert "mermaid" in text.lower()
-    assert '<ul id="nodes"' not in text
+    assert "mermaid" not in text.lower()
 
 
 def test_make_client_picks_fake_or_openrouter(monkeypatch):
