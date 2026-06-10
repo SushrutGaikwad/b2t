@@ -18,9 +18,6 @@ out/
 # Log files
 logs/
 
-# Reading
-CODEBASE_GUIDE.md
-
 # Editor and temporary files
 *.bak
 *.sav
