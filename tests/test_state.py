@@ -34,3 +34,13 @@ def test_llm_choices_coerce_nested_dicts():
     )
     assert state.llm_choices["convert"].model == "m"
     assert state.llm_choices["convert"].prompt_version == "v2"
+
+
+def test_llm_runs_coerce_nested_dicts():
+    state = PipelineState(
+        input_dir=Path("in"),
+        output_dir=Path("out"),
+        llm_runs={"convert": {"model": "m", "prompt_version": "v1"}},
+    )
+    assert state.llm_runs["convert"].model == "m"
+    assert state.llm_runs["convert"].prompt_version == "v1"
