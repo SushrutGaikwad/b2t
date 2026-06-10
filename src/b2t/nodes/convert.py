@@ -21,7 +21,7 @@ def convert_node(state: PipelineState, client: LLMClient) -> dict:
     reference = REFERENCE_DECK.read_text(encoding="utf-8")
     guides = MATH_GUIDE.read_text(encoding="utf-8")
     logger.info("converting {} chars of LaTeX", len(state.stripped_tex))
-    output, run = run_prompt(
+    output, run, rendered = run_prompt(
         state,
         "convert",
         client,
@@ -31,4 +31,5 @@ def convert_node(state: PipelineState, client: LLMClient) -> dict:
     return {
         "typst_source": strip_code_fence(output),
         "llm_runs": {**state.llm_runs, "convert": run},
+        "llm_rendered": {**state.llm_rendered, "convert": rendered},
     }

@@ -112,3 +112,12 @@ def test_convert_node_records_provenance():
 
     update = convert_node(_state(stripped_tex="x"), client=FakeClient("= ok\n"))
     assert update["llm_runs"]["convert"].prompt_version == "v1"
+
+
+def test_convert_node_records_rendered_prompt():
+    from b2t.llm import FakeClient
+    from b2t.nodes.convert import convert_node
+
+    update = convert_node(_state(stripped_tex="MYSOURCE"), client=FakeClient("= ok\n"))
+    assert "MYSOURCE" in update["llm_rendered"]["convert"].user
+    assert update["llm_rendered"]["convert"].system
