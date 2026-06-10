@@ -7,6 +7,7 @@ let graphNodes = null;   // node name -> strip element
 let nodeOrder = [];      // pipeline node order from /api/graph
 let llmNodes = [];       // from /api/llm-nodes
 let models = [];         // from /api/models
+let stateNodes = [];     // node names that have a captured snapshot
 
 if (window.CodeMirror) {
   CodeMirror.defineSimpleMode("typst", {
@@ -61,6 +62,7 @@ async function loadGraph() {
     box.textContent = n.name;
     strip.appendChild(box);
     map[n.name] = box;
+    box.addEventListener("click", () => inspectNode(n.name));
     if (i < data.nodes.length - 1) {
       const arrow = document.createElement("span");
       arrow.className = "arrow";
@@ -293,10 +295,13 @@ async function finish(id, job) {
 }
 
 async function poll(id) {
+  currentJobId = id;
   const res = await fetch(`/api/jobs/${id}`);
   const job = await res.json();
   setBadge(job.status);
   highlightGraph(job.current_node, job.status);
+  stateNodes = job.state_nodes || [];
+  markInspectable();
   if (TERMINAL.includes(job.status)) finish(id, job);
   else setTimeout(() => poll(id), 1000);
 }
@@ -342,6 +347,106 @@ $("download").addEventListener("click", () => {
   if (!currentJobId) return;
   window.location = `/api/jobs/${currentJobId}/download`;
 });
+
+// ----- per-node state inspector -----
+const STATE_PREVIEW = 500;
+
+function markInspectable() {
+  if (!graphNodes) return;
+  for (const [name, box] of Object.entries(graphNodes)) {
+    box.classList.toggle("inspectable", stateNodes.includes(name));
+  }
+}
+
+async function inspectNode(node) {
+  if (!currentJobId || !stateNodes.includes(node)) return;
+  if (graphNodes) {
+    for (const box of Object.values(graphNodes)) box.classList.remove("selected");
+    if (graphNodes[node]) graphNodes[node].classList.add("selected");
+  }
+  const panel = $("state-inspector");
+  panel.textContent = "loading...";
+  try {
+    const r = await fetch(`/api/jobs/${currentJobId}/state/${node}`);
+    if (!r.ok) throw new Error();
+    renderInspector(panel, await r.json());
+  } catch (e) {
+    panel.textContent = "(failed to load state)";
+  }
+}
+
+function renderInspector(panel, data) {
+  panel.innerHTML = "";
+  const title = document.createElement("div");
+  title.className = "inspector-title";
+  title.textContent = `State after: ${data.node}`;
+  const changed = document.createElement("div");
+  changed.className = "inspector-changed";
+  changed.textContent = "changed: " + (data.changed.join(", ") || "(nothing)");
+  panel.append(title, changed);
+  for (const key of Object.keys(data.state).sort()) {
+    const row = document.createElement("div");
+    row.className = "state-field" + (data.changed.includes(key) ? " is-changed" : "");
+    const k = document.createElement("span");
+    k.className = "state-key";
+    k.textContent = key + ": ";
+    row.append(k, renderValue(data.state[key]));
+    panel.appendChild(row);
+  }
+}
+
+function renderValue(v) {
+  if (typeof v === "string") return renderString(v);
+  if (Array.isArray(v)) {
+    const span = document.createElement("span");
+    span.textContent = JSON.stringify(v);
+    return span;
+  }
+  if (v && typeof v === "object") {
+    const box = document.createElement("div");
+    box.className = "state-object";
+    for (const [kk, vv] of Object.entries(v)) {
+      const row = document.createElement("div");
+      row.className = "state-subfield";
+      const k = document.createElement("span");
+      k.className = "state-key";
+      k.textContent = kk + ": ";
+      row.append(k, renderValue(vv));
+      box.appendChild(row);
+    }
+    return box;
+  }
+  const span = document.createElement("span");
+  span.textContent = String(v);
+  return span;
+}
+
+function renderString(s) {
+  const span = document.createElement("span");
+  span.className = "state-string";
+  if (s.length <= STATE_PREVIEW) {
+    span.textContent = s;
+    return span;
+  }
+  const body = document.createElement("span");
+  body.textContent = s.slice(0, STATE_PREVIEW);
+  const meta = document.createElement("span");
+  meta.className = "state-meta";
+  meta.textContent = ` ... (${s.length} chars) `;
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "expand";
+  btn.textContent = "expand";
+  let expanded = false;
+  btn.addEventListener("click", () => {
+    expanded = !expanded;
+    body.textContent = expanded ? s : s.slice(0, STATE_PREVIEW);
+    meta.textContent = expanded ? ` (${s.length} chars) ` : ` ... (${s.length} chars) `;
+    btn.textContent = expanded ? "collapse" : "expand";
+  });
+  span.append(body, meta, btn);
+  return span;
+}
 
 loadGraph();
 loadLLMNodes();

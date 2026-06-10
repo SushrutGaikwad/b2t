@@ -346,3 +346,8 @@ def test_node_state_unknown_node_returns_404():
     client = _client()
     job_id = _run_sample(client)
     assert client.get(f"/api/jobs/{job_id}/state/nope").status_code == 404
+
+
+def test_index_has_state_inspector_container():
+    text = _client().get("/").text
+    assert '<div id="state-inspector"' in text
