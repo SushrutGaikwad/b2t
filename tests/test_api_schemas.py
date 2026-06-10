@@ -25,3 +25,14 @@ def test_to_view_maps_fields():
 def test_to_view_has_pdf_false_for_missing_file(tmp_path):
     rec = JobRecord(id="x", status="succeeded", pdf_path=tmp_path / "nope.pdf")
     assert to_view(rec).has_pdf is False
+
+
+def test_to_view_maps_llm_runs():
+    rec = JobRecord(
+        id="abc",
+        status="succeeded",
+        llm_runs={"convert": {"model": "m/x", "prompt_version": "v1"}},
+    )
+    view = to_view(rec)
+    assert view.llm_runs["convert"].model == "m/x"
+    assert view.llm_runs["convert"].prompt_version == "v1"

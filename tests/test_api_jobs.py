@@ -77,3 +77,17 @@ def test_current_node_tracks_the_running_node(tmp_path):
 
     run_job(store, job.id, SAMPLE_DECK, tmp_path / "out", lambda: SpyClient())
     assert captured["during_convert"] == "convert"
+
+
+def test_run_job_records_llm_runs(tmp_path):
+    from b2t.config import DEFAULT_MODEL
+
+    store = JobStore()
+    out = tmp_path / "out"
+    job = store.create(input_dir=SAMPLE_DECK, output_dir=out)
+    run_job(store, job.id, SAMPLE_DECK, out, lambda: FakeClient("= Hi\n"))
+    rec = store.get(job.id)
+    assert rec.llm_runs["convert"] == {
+        "model": DEFAULT_MODEL,
+        "prompt_version": "v1",
+    }

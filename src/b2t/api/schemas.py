@@ -5,6 +5,13 @@ from pydantic import BaseModel
 from b2t.api.jobs import JobRecord
 
 
+class NodeRunView(BaseModel):
+    """What an LLM node used on a run: the model and prompt version."""
+
+    model: str
+    prompt_version: str
+
+
 class JobCreated(BaseModel):
     """Response to a job submission: the new job's id and initial status."""
 
@@ -28,6 +35,7 @@ class JobView(BaseModel):
     images: list[str]
     has_typst: bool
     has_pdf: bool
+    llm_runs: dict[str, NodeRunView] = {}
 
 
 class SaveRequest(BaseModel):
@@ -84,4 +92,7 @@ def to_view(job: JobRecord) -> JobView:
         images=job.images,
         has_typst=job.has_typst,
         has_pdf=has_pdf,
+        llm_runs={
+            node: NodeRunView(**run) for node, run in job.llm_runs.items()
+        },
     )

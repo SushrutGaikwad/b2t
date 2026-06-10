@@ -55,6 +55,7 @@ class JobRecord:
     has_typst: bool = False
     typst_path: Path | None = None
     pdf_path: Path | None = None
+    llm_runs: dict[str, dict] = field(default_factory=dict)
 
 
 class JobStore:
@@ -151,6 +152,7 @@ def run_job(
         return
 
     main_tex = state.get("main_tex")
+    runs = state.get("llm_runs", {})
     store.update(
         job_id,
         main_tex=main_tex.name if main_tex else None,
@@ -158,6 +160,10 @@ def run_job(
         images=[p.name for p in state.get("image_files", [])],
         has_typst=state.get("typst_source") is not None,
         typst_path=state.get("typst_path"),
+        llm_runs={
+            node: {"model": run.model, "prompt_version": run.prompt_version}
+            for node, run in runs.items()
+        },
     )
     if state.get("compiled"):
         logger.info("job {} succeeded", job_id)
