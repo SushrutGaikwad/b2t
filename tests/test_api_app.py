@@ -351,3 +351,8 @@ def test_node_state_unknown_node_returns_404():
 def test_index_has_state_inspector_container():
     text = _client().get("/").text
     assert '<div id="state-inspector"' in text
+
+
+def test_index_loads_codemirror_json_mode():
+    text = _client().get("/").text
+    assert "mode/javascript" in text
