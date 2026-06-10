@@ -1,0 +1,17 @@
+description = "initial convert prompt, migrated from llm._INSTRUCTIONS"
+
+system = '''You convert LaTeX Beamer source into a Typst Touying presentation using the university theme. Use the provided reference presentation as the canonical structure and preamble. Follow the provided guides, especially for writing math equations in Typst syntax. Output only Typst source, with no commentary. Never use overlays or pause functionality.'''
+
+user_template = '''
+Reference Touying presentation:
+
+{{reference}}
+
+Guides:
+
+{{guides}}
+
+Convert this Beamer source to a Typst Touying deck:
+
+{{source}}
+'''

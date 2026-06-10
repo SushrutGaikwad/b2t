@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+from b2t import prompts as P
 from b2t.prompts import (
     PromptVersion,
     default_version,
@@ -83,3 +84,12 @@ def test_default_version_unknown_node_raises(tmp_path):
     _make_registry(tmp_path)
     with pytest.raises(KeyError):
         default_version("nope", base=tmp_path)
+
+
+def test_real_convert_v1_is_default_and_loadable():
+    assert P.default_version("convert") == "v1"
+    pv = P.load("convert", "v1")
+    assert "Typst Touying" in pv.system
+    assert "Never use overlays" in pv.system
+    for token in ("{{reference}}", "{{guides}}", "{{source}}"):
+        assert token in pv.user_template
