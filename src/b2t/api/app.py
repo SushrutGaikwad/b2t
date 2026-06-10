@@ -1,3 +1,4 @@
+import json
 import tempfile
 import zipfile
 from pathlib import Path
@@ -49,6 +50,38 @@ def _make_client(use_fake: bool) -> LLMClient:
     if use_fake:
         return FakeClient(FAKE_TYPST)
     return OpenRouterClient()
+
+
+def _parse_choices(raw: str) -> dict:
+    """Parse and validate the per-node choices JSON from a form field.
+
+    Args:
+        raw: JSON like {"convert": {"model": "...", "prompt_version": "v1"}};
+            empty string means no overrides.
+
+    Returns:
+        The validated choices dict (empty if raw is empty).
+
+    Raises:
+        HTTPException: 400 if the JSON is invalid, names an unknown node, or
+            names an unknown prompt version. Unknown models are allowed through.
+    """
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="choices is not valid JSON")
+    valid_nodes = set(prompts.list_nodes())
+    for node, sel in data.items():
+        if node not in valid_nodes:
+            raise HTTPException(status_code=400, detail=f"unknown LLM node: {node}")
+        version = sel.get("prompt_version")
+        if version and version not in prompts.list_versions(node):
+            raise HTTPException(
+                status_code=400, detail=f"unknown version {version} for node {node}"
+            )
+    return data
 
 
 def _safe_target(root: Path, rel: str) -> Path:
@@ -119,11 +152,12 @@ def create_app(store: JobStore | None = None) -> FastAPI:
     async def create_job(
         files: list[UploadFile] = File([]),
         use_fake: bool = Form(False),
-        model: str = Form(""),
+        choices: str = Form(""),
     ):
         """Reconstruct an uploaded deck folder and start a conversion job."""
         if not files:
             raise HTTPException(status_code=400, detail="no files submitted")
+        parsed = _parse_choices(choices)
         root = Path(tempfile.mkdtemp(prefix="b2t_upload_"))
         _reconstruct(files, root)
         output_dir = root.parent / (root.name + "_out")
@@ -132,20 +166,21 @@ def create_app(store: JobStore | None = None) -> FastAPI:
         EXECUTOR.submit(
             run_job, jobs, job.id, root, output_dir,
             lambda: _make_client(use_fake),
-            {"convert": {"model": model}} if model else {},
+            parsed,
         )
         return JobCreated(job_id=job.id, status=job.status)
 
     @app.post("/api/jobs/sample", response_model=JobCreated)
-    async def create_sample_job(use_fake: bool = Form(False), model: str = Form("")):
+    async def create_sample_job(use_fake: bool = Form(False), choices: str = Form("")):
         """Start a conversion job on the bundled sample deck."""
+        parsed = _parse_choices(choices)
         output_dir = Path(tempfile.mkdtemp(prefix="b2t_sample_")) / "out"
         job = jobs.create(input_dir=SAMPLE_DECK, output_dir=output_dir)
         logger.info("job {} created for the sample deck", job.id)
         EXECUTOR.submit(
             run_job, jobs, job.id, SAMPLE_DECK, output_dir,
             lambda: _make_client(use_fake),
-            {"convert": {"model": model}} if model else {},
+            parsed,
         )
         return JobCreated(job_id=job.id, status=job.status)
 

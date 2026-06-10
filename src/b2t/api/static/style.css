@@ -20,3 +20,5 @@ iframe { width: 100%; height: 480px; border: 1px solid #e3dbe8; border-radius: 6
 #graph .node.pending rect, #graph .node.pending polygon, #graph .node.pending path { fill: #e6e1ef !important; stroke: #c7bfd6 !important; }
 #graph .node.active { animation: b2t-pulse 1.1s ease-in-out infinite; }
 @keyframes b2t-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.65; } }
+.llm-node { margin-top: 0.5rem; display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
+#provenance { margin-top: 0.5rem; font-size: 0.85rem; color: #555; }

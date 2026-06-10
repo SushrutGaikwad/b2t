@@ -195,12 +195,6 @@ def test_models_endpoint_lists_open_models_with_labels():
     assert body["default"] in {m["id"] for m in body["models"]}
 
 
-def test_index_has_model_select():
-    text = _client().get("/").text
-    assert '<select id="model"' in text
-    assert 'type="text" id="model"' not in text
-
-
 def test_graph_endpoint_returns_mermaid():
     body = _client().get("/api/graph").json()
     assert "graph" in body["mermaid"].lower()
@@ -240,3 +234,38 @@ def test_llm_nodes_endpoint_lists_convert_with_versions():
     assert convert["default_version"] == "v1"
     assert "v1" in [v["id"] for v in convert["versions"]]
     assert all(v["label"] for v in convert["versions"])
+
+
+def test_choices_validation_rejects_unknown_node():
+    client = _client()
+    res = client.post(
+        "/api/jobs/sample",
+        data={"use_fake": "true", "choices": '{"nope": {"prompt_version": "v1"}}'},
+    )
+    assert res.status_code == 400
+
+
+def test_choices_validation_rejects_unknown_version():
+    client = _client()
+    res = client.post(
+        "/api/jobs/sample",
+        data={"use_fake": "true", "choices": '{"convert": {"prompt_version": "v999"}}'},
+    )
+    assert res.status_code == 400
+
+
+def test_sample_job_with_valid_choices_runs_and_reports_provenance():
+    client = _client()
+    res = client.post(
+        "/api/jobs/sample",
+        data={"use_fake": "true", "choices": '{"convert": {"prompt_version": "v1"}}'},
+    )
+    assert res.status_code == 200
+    body = _wait_terminal(client, res.json()["job_id"])
+    assert body["llm_runs"]["convert"]["prompt_version"] == "v1"
+
+
+def test_index_has_llm_nodes_container():
+    text = _client().get("/").text
+    assert '<div id="llm-nodes"' in text
+    assert '<select id="model"' not in text

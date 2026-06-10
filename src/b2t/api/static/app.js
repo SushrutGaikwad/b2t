@@ -108,6 +108,12 @@ async function finish(id, job) {
   $("error").textContent = job.error || "(none)";
   $("save").disabled = false;
   $("download").disabled = false;
+  const prov = job.llm_runs || {};
+  $("provenance").textContent = Object.keys(prov).length
+    ? "Ran: " + Object.entries(prov)
+        .map(([n, r]) => `${n} (${r.model}, ${r.prompt_version})`)
+        .join("; ")
+    : "";
 }
 
 async function poll(id) {
@@ -121,26 +127,58 @@ async function poll(id) {
 
 function commonFields(fd) {
   fd.append("use_fake", $("use-fake").checked ? "true" : "false");
-  fd.append("model", $("model").value);
+  fd.append("choices", JSON.stringify(collectChoices()));
   return fd;
 }
 
-async function loadModels() {
-  const sel = $("model");
-  sel.innerHTML = "";
+let llmNodes = [];
+
+async function loadLLMNodes() {
+  const container = $("llm-nodes");
+  container.innerHTML = "";
+  let models = [];
   try {
-    const res = await fetch("/api/models");
-    const data = await res.json();
-    for (const m of data.models) {
+    models = (await (await fetch("/api/models")).json()).models;
+    llmNodes = (await (await fetch("/api/llm-nodes")).json()).nodes;
+  } catch (e) {
+    return; // leave empty; submitting with no choices keeps server defaults
+  }
+  for (const node of llmNodes) {
+    const row = document.createElement("div");
+    row.className = "llm-node";
+    const modelSel = document.createElement("select");
+    modelSel.dataset.node = node.node;
+    modelSel.className = "model-select";
+    for (const m of models) {
       const opt = document.createElement("option");
       opt.value = m.id;
-      opt.textContent = m.id === data.default ? `${m.label} (default)` : m.label;
-      opt.selected = m.id === data.default;
-      sel.appendChild(opt);
+      opt.textContent = m.label;
+      modelSel.appendChild(opt);
     }
-  } catch (e) {
-    // an empty select submits "", which keeps the env/config default chain
+    const verSel = document.createElement("select");
+    verSel.dataset.node = node.node;
+    verSel.className = "version-select";
+    for (const v of node.versions) {
+      const opt = document.createElement("option");
+      opt.value = v.id;
+      opt.textContent = v.label;
+      opt.selected = v.id === node.default_version;
+      verSel.appendChild(opt);
+    }
+    row.append(`${node.node}: model `, modelSel, " version ", verSel);
+    container.appendChild(row);
   }
+}
+
+function collectChoices() {
+  const choices = {};
+  for (const sel of document.querySelectorAll(".model-select")) {
+    choices[sel.dataset.node] = { model: sel.value };
+  }
+  for (const sel of document.querySelectorAll(".version-select")) {
+    (choices[sel.dataset.node] ||= {}).prompt_version = sel.value;
+  }
+  return choices;
 }
 
 async function start(url, fd) {
@@ -185,5 +223,5 @@ $("download").addEventListener("click", () => {
   window.location = `/api/jobs/${currentJobId}/download`;
 });
 
-loadModels();
+loadLLMNodes();
 document.addEventListener("mermaid-ready", loadGraph);
