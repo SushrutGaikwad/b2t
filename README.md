@@ -79,8 +79,8 @@ same families on its own cluster behind any OpenAI-compatible endpoint (vLLM,
 Ollama). The catalog in `src/b2t/config.py` lists the strongest open-weight
 flagship of each family (Qwen 3.5 397B, Mistral Large 3, Llama 4 Maverick,
 Gemma 4 31B) plus the sizes campuses most commonly self-host. The testing UI
-shows each model's complexity, strength, and reasoning level in the dropdown;
-the default is `openai/gpt-oss-120b`.
+shows each model's complexity, strength, and reasoning level in each node's
+model dropdown; the default is `openai/gpt-oss-120b`.
 
 ## Getting started
 
@@ -137,15 +137,21 @@ success).
 
 A thin browser UI for converting a deck folder and inspecting the result.
 
+> This UI is for local development and testing only. It is a harness for
+> exercising the pipeline and inspecting output, not the end-user product. A
+> separate SaaS UI will be built later once the pipeline matures (see the
+> roadmap in `CLAUDE.md`).
+
 ```bash
 uv run uvicorn b2t.api.app:app --reload
 ```
 
 Open http://127.0.0.1:8000. Click "Use sample deck" for a one-click run, or
-pick a deck folder with the folder chooser and a model from the dropdown. Tick
-"use fake converter (offline)" to exercise the pipeline without calling
-OpenRouter. The page shows per-node progress, the generated `main.typ` in an
-editor (save to recompile), the compiled PDF, and any compile error.
+pick a deck folder with the folder chooser. For each LLM node you can choose a
+model and a prompt version; tick "use fake converter (offline)" to exercise the
+pipeline without calling OpenRouter. The page shows per-node progress, the
+model and prompt version each node used, the generated `main.typ` in an editor
+(save to recompile), the compiled PDF, and any compile error.
 
 ## Logs
 
