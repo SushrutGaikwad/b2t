@@ -151,7 +151,9 @@ pick a deck folder with the folder chooser. For each LLM node you can choose a
 model and a prompt version; tick "use fake converter (offline)" to exercise the
 pipeline without calling OpenRouter. The page shows per-node progress, the
 model and prompt version each node used, the generated `main.typ` in an editor
-(save to recompile), the compiled PDF, and any compile error.
+(save to recompile), the compiled PDF, and any compile error. Click any pipeline
+node to inspect the LangGraph state captured after that step (the accumulated
+state, with the fields that node changed highlighted).
 
 ## Logs
 

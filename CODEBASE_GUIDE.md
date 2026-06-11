@@ -202,6 +202,7 @@ b2t/
       app.py              FastAPI app + HTTP endpoints (web entry point)
       jobs.py             background job runner + in-memory job store
       schemas.py          Pydantic request/response models
+      state_view.py       JSON-safe state serializer + per-node snapshot folding
       static/             index.html, app.js, style.css (the browser UI)
 
   prompts/                the prompt registry (versioned AI wording, see section 7)
@@ -217,7 +218,7 @@ b2t/
     specs/                one design document per feature
     plans/                one step-by-step implementation plan per feature
 
-  tests/                  pytest suite (121 tests across 19 files) + fixtures
+  tests/                  pytest suite (142 tests across 20 files) + fixtures
     conftest.py           shared fixture (a writable copy of the sample deck)
     fixtures/sample_deck/ a minimal Beamer deck used throughout the tests
     test_*.py             one test module per source module
@@ -905,8 +906,8 @@ the LaTeX side.
 The web layer wraps the same pipeline in a FastAPI server with a browser UI. It
 adds: background execution (so the browser does not freeze during a conversion),
 live progress tracking, an in-memory job store, per-node model and prompt-version
-selection, prompt preview, and an edit-and-recompile loop. It lives in three Python
-files plus a static frontend.
+selection, prompt preview, a per-node state inspector, and an edit-and-recompile
+loop. It lives in four Python files plus a static frontend.
 
 > **This is a development and testing harness, not the end-user product.** It exists
 > to exercise the pipeline and inspect output. A separate SaaS UI is a later roadmap
@@ -923,15 +924,20 @@ This module owns the job lifecycle.
   at once.
 - `JobRecord` (dataclass) - everything tracked about one job: `id`, `status`,
   `current_node`, `error`, `input_dir`, `output_dir`, `main_tex`, `included_tex`,
-  `images`, `has_typst`, `typst_path`, `pdf_path`, plus two AI-provenance maps:
-  `llm_runs` (`{node: {model, prompt_version}}`) and `llm_rendered`
-  (`{node: {system, user}}`, the exact prompt each node sent).
+  `images`, `has_typst`, `typst_path`, `pdf_path`, two AI-provenance maps
+  (`llm_runs` = `{node: {model, prompt_version}}` and `llm_rendered` =
+  `{node: {system, user}}`, the exact prompt each node sent), and two fields that
+  feed the state inspector: `seed_state` (the JSON-safe pipeline seed) and
+  `node_deltas` (a list of per-node `NodeDelta`s captured as each node finishes).
 - `JobStore` - a thread-safe in-memory registry of jobs, guarded by a
   `threading.Lock` (the lock prevents two threads corrupting the data at once):
   - `create(**kwargs)` - makes a `JobRecord` with a random hex id, stores it,
     returns it.
   - `get(job_id)` - returns the record or `None`.
   - `update(job_id, **changes)` - applies field updates under the lock.
+  - `append_delta(job_id, delta)` - appends one captured `NodeDelta` to the job's
+    `node_deltas` under the lock (a list append the replace-style `update` cannot
+    express).
 
   Because it is in-memory, **all jobs are lost when the server restarts.** That is
   acceptable for a local testing tool.
@@ -957,13 +963,17 @@ stateDiagram-v2
      status to `running`, and builds the graph. The client is built here, **inside
      the try/except**, via the `make_client` factory, so a missing API key records
      the job as `failed` instead of crashing the request handler.
-  2. Calls `graph.stream(seed, stream_mode=["updates", "debug"])` and loops over the
-     events. This is the key trick for live progress:
+  2. Serializes the seed once into `seed_state`, then calls
+     `graph.stream(seed, stream_mode=["updates", "debug"])` and loops over the
+     events. This is the key trick for live progress *and* live state capture:
      - **debug "task" events** fire when a node is *about to run*, so the code
        records `current_node` as the node that is actually executing (not the last
        one that finished).
-     - **update events** carry each node's returned dict, accumulated into a local
-       `state` dict.
+     - **update events** carry each node's returned dict. Each is accumulated into a
+       local `state` dict *and* turned into a `NodeDelta` (the node name, the fields
+       it changed, and their JSON-safe values) appended to the job. Because this
+       happens inside the loop, a node that later raises still leaves every earlier
+       node's snapshot in place.
   3. If any node raises, it catches the exception, sets status `failed` with the
      message, and returns.
   4. After the run, it copies a summary into the job record: the main file name, the
@@ -982,10 +992,11 @@ can evolve independently.)
 - `NodeRunView` - `{model, prompt_version}`, one node's provenance.
 - `JobCreated` - `{job_id, status}`, returned when a job is created.
 - `JobView` - the full status payload the UI polls: `id`, `status`, `current_node`,
-  `error`, `main_tex`, `included_tex`, `images`, `has_typst`, `has_pdf`, and
-  `llm_runs` (a map of `NodeRunView`). **It deliberately does *not* include the
-  large rendered prompts** - those are served only on demand (see below), so the
-  per-second poll stays small.
+  `error`, `main_tex`, `included_tex`, `images`, `has_typst`, `has_pdf`, `llm_runs`
+  (a map of `NodeRunView`), and `state_nodes` (the names of the nodes that have a
+  captured snapshot, so the strip knows which boxes are clickable). **It deliberately
+  does *not* include the large rendered prompts or the snapshot bodies** - those are
+  served only on demand (see below), so the per-second poll stays small.
 - `SaveRequest` - `{source}`, the edited Typst the user submits.
 - `SaveResult` - `{ok, error}`, the recompile outcome.
 - `ModelOption` / `ModelsView` - `{id, label}` entries and `{models, default}`, the
@@ -1000,9 +1011,13 @@ can evolve independently.)
   prompt version's raw content for the template preview.
 - `RenderedPromptView` - `{node, model, prompt_version, system, user}`, the exact
   prompt a node sent on a specific job's run.
+- `NodeStateView` - `{node, changed, state}`, one node's accumulated pipeline state
+  (the `state` dict) plus the field names that node changed; the body the state
+  inspector renders.
 - `to_view(job) -> JobView` - converts an internal `JobRecord` into the external
-  `JobView`, computing `has_pdf` by checking the PDF actually exists on disk and
-  mapping `llm_runs` into `NodeRunView`s.
+  `JobView`, computing `has_pdf` by checking the PDF actually exists on disk, mapping
+  `llm_runs` into `NodeRunView`s, and listing the captured node names in
+  `state_nodes`.
 
 ### 13.3 `api/app.py` - the FastAPI app and endpoints
 
@@ -1046,6 +1061,7 @@ optional `store` is what lets tests inject their own job store. The routes:
 | `POST /api/jobs/{id}/save`          | `save_job`           | Writes edited Typst back, recompiles, updates status, and on failure deletes the stale PDF so a later download stays consistent.            |
 | `GET /api/jobs/{id}/download`       | `download_job`       | Zips the output folder and returns it as `deck.zip`.                                                                                        |
 | `GET /api/jobs/{id}/prompt/{node}`  | `get_rendered_prompt`| Returns the exact prompt that node sent on this job's run (404 before a run, or for an unknown node).                                       |
+| `GET /api/jobs/{id}/state/{node}`   | `get_node_state`     | Returns the accumulated pipeline state after `node` ran (the snapshot the inspector shows), folded on demand from the seed and the per-node deltas; 404 before that node has run. |
 | `GET /api/models`                   | `get_models`         | Returns the model list and default for the dropdown.                                                                                       |
 | `GET /api/llm-nodes`                | `get_llm_nodes`      | Returns each AI node with its prompt versions and default version (drives the per-node UI controls).                                        |
 | `GET /api/prompts/{node}/{version}` | `get_prompt_content` | Returns a prompt version's `system` and `user_template` (404 for unknown node/version). The template preview.                              |
@@ -1060,6 +1076,34 @@ serves the browser UI at the root URL.
 > (`prompts.list_nodes()`). So the diagram the browser draws is generated *from the
 > real graph*, and the "which nodes get AI controls" decision can never drift from
 > the actual pipeline.
+
+### 13.4 `api/state_view.py` - serializing and folding pipeline state
+
+The state inspector needs two things: to turn the live `PipelineState` (full of
+`Path`s and Pydantic submodels) into something a browser can show, and to
+reconstruct "the state as of node N" on demand. This small module does both, and it
+imports nothing from the rest of the web layer, so it cannot create an import cycle.
+
+- `to_jsonsafe(value)` - recursively converts one state value to a JSON-safe form: a
+  `Path` becomes a string, a Pydantic model becomes a dict (via `model_dump`), lists
+  and dicts recurse, primitives pass through, and anything unexpected is stringified
+  rather than crashing a debug tool.
+- `serialize_values(d)` - applies `to_jsonsafe` to every value of a dict; used for
+  both a node's delta and the seed.
+- `NodeDelta` (dataclass) - one node's contribution to the state: `node` (its name),
+  `changed` (the field names it wrote), and `values` (those values, already
+  JSON-safe).
+- `fold_snapshot(seed_state, deltas, node)` - rebuilds the accumulated snapshot by
+  starting from the seed and applying each delta's values in order up to and
+  including the named node, returning that node's `changed` list and the full state
+  dict. It raises `KeyError` (which the endpoint turns into a 404) if the node has
+  not run.
+
+`run_job` does the capturing (it calls `serialize_values` and builds `NodeDelta`s);
+the `/state/{node}` endpoint does the serving (it calls `fold_snapshot`). Storing
+per-node *deltas* rather than full snapshots keeps each field value once and makes
+the "what changed here" highlight free, while the fold reconstructs the full state
+cheaply when a node is clicked.
 
 ---
 
@@ -1076,7 +1120,9 @@ The page skeleton. Three sections:
 - **Submit**: a folder picker (`<input webkitdirectory>`), a "use fake converter
   (offline)" checkbox, and "Convert folder" / "Use sample deck" buttons.
 - **Status**: a status badge, a `#graph` container for the custom pipeline strip, a
-  `#llm-nodes` container for the per-AI-node control cards, and a `#provenance` line.
+  `#graph-hint` line telling the user to click a node to inspect its state, a hidden
+  `#state-inspector` panel that holds the per-node state view, a `#llm-nodes`
+  container for the per-AI-node control cards, and a `#provenance` line.
 - **Output**: a `<textarea id="typ">` that becomes the code editor, "Save and
   compile" / "Download" buttons, a PDF `<iframe>`, and an error `<pre>`.
 
@@ -1098,9 +1144,10 @@ The client logic, plain JavaScript. Key pieces:
   `pending` based on where the pipeline is (the CSS animates the active one).
 - `loadLLMNodes()` - fetches `/api/models` and `/api/llm-nodes` and builds one
   **card** per AI node into `#llm-nodes` via `buildCard`.
-- `buildCard(node)` - a card with a model dropdown (`.model-select`), a prompt
-  version dropdown (`.version-select`, default selected), and a "view prompt" toggle
-  button. The dropdowns carry `data-node` so the submit path can read them.
+- `buildCard(node)` - a card stacking, one per line, a model dropdown
+  (`.model-select`, labelled "model"), a prompt-version dropdown (`.version-select`,
+  labelled "prompt version", default selected), and a "view prompt" toggle button.
+  The dropdowns carry `data-node` so the submit path can read them.
 - `buildPreview(node, getVersion)` - the inline, read-only prompt preview that the
   toggle expands. It has two tabs: **template** (fetches
   `/api/prompts/{node}/{version}` and shows the raw `system` and `user_template`
@@ -1118,6 +1165,18 @@ The client logic, plain JavaScript. Key pieces:
   iframe at the PDF endpoint (with a cache-busting timestamp), shows any error,
   enables the Save and Download buttons, and writes the provenance line ("Ran:
   convert (model, version)").
+- **The state inspector** (a cluster of small functions). After each poll,
+  `markInspectable()` adds an `inspectable` class to the strip boxes whose names are
+  in the job's `state_nodes`, so only nodes that have run look clickable. Clicking a
+  node calls `inspectNode(node)`, which toggles the panel shut if that node is
+  already shown, otherwise fetches `/api/jobs/{id}/state/{node}` and renders it.
+  `ensureInspector()` builds the panel shell once (a header with a `hide` button, a
+  `changed:` line, and an `#inspector-viewer`). `setViewer(text)` puts the
+  pretty-printed JSON into the viewer through `highlightJson(text)`, a tiny
+  highlighter that HTML-escapes first (so deck or model text can never inject markup)
+  and wraps JSON tokens in coloured spans; the viewer is a plain element that scrolls
+  natively, so any snapshot size reaches the bottom. `selectNode`/`hideInspector`
+  manage the selected-node outline, and starting a new run hides the panel.
 - Button handlers: "Convert folder" gathers the picked files (with their relative
   paths) and POSTs to `/api/jobs`; "Use sample deck" POSTs to `/api/jobs/sample`;
   "Save and compile" POSTs the edited source to `/save` and refreshes the PDF;
@@ -1128,9 +1187,13 @@ The client logic, plain JavaScript. Key pieces:
 Plain styling. The notable parts are: the `#graph .node.done/.active/.pending` rules
 that color the custom strip boxes by pipeline state (green = done, amber = active,
 grey = pending), a pulse animation for the active node, a dashed accent for AI
-(`.node.llm`) nodes, and the `.llm-card` / `.prompt-preview` / `.preview-tabs` rules
-for the per-node control cards and the inline prompt preview. The badge colors also
-change with status (amber while running, green on success, red on failure).
+(`.node.llm`) nodes, the `.llm-card` / `.prompt-preview` / `.preview-tabs` rules for
+the per-node control cards and the inline prompt preview, and the state-inspector
+rules: `#graph .node.inspectable` (pointer cursor) and `.node.selected` (outline) on
+the strip, `#inspector-viewer` (the dark, capped-height, natively-scrolling JSON
+box), and the `.json-key` / `.json-string` / `.json-number` / `.json-boolean` /
+`.json-null` token colours. The badge colors also change with status (amber while
+running, green on success, red on failure).
 
 ---
 
@@ -1193,6 +1256,10 @@ sequenceDiagram
         UI->>API: GET /api/jobs/{id}/prompt/convert
         API-->>UI: { model, prompt_version, system, user }
     end
+    opt user clicks a node to inspect its state
+        UI->>API: GET /api/jobs/{id}/state/{node}
+        API-->>UI: { node, changed, state }
+    end
     opt user edits and recompiles
         UI->>API: POST /api/jobs/{id}/save { source }
         API->>Graph: compile_typst(...)
@@ -1205,7 +1272,7 @@ sequenceDiagram
 
 ## 16. The tests (`tests/`)
 
-The suite has **121 tests** across 19 files, one test module per source module, and
+The suite has **142 tests** across 20 files, one test module per source module, and
 it runs in a few seconds. `conftest.py` provides a `deck_copy` fixture: a writable
 copy of the sample deck in a temp directory, so tests never mutate the fixture
 itself.
@@ -1224,8 +1291,14 @@ Coverage by area:
 - **Config and logging**: `test_config`, `test_state`, `test_log`.
 - **The web layer** has the most tests: `test_api_app`, plus `test_api_jobs` and
   `test_api_schemas` (including the structured `/api/graph`, the template and
-  rendered prompt endpoints, the `choices` validation paths, and the guard that the
-  large rendered prompt never enters `JobView`).
+  rendered prompt endpoints, the `choices` validation paths, the guard that the large
+  rendered prompt never enters `JobView`, and the state inspector: the
+  `/api/jobs/{id}/state/{node}` endpoint, the `state_nodes` poll field, and the
+  capture of per-node deltas in `run_job`, including the partial set left after a
+  mid-pipeline failure).
+- **The state-inspector helper** has its own module, `test_state_view`: `to_jsonsafe`
+  over paths, lists, and Pydantic submodels, and `fold_snapshot`'s ordering and
+  `changed` result.
 - **Typst-touching tests** are marked `integration` and only run when the `typst`
   binary is present (`pytest -m "not integration"` skips them). On a machine with
   Typst 0.14+ installed they run and pass too.
@@ -1363,7 +1436,8 @@ If you want to read the code in the order it executes, follow this path:
 6. `typst_runner.py`, `typst_images.py`, and `typst_output.py` for the output and
    compile steps.
 7. `log.py` for how logging is wired.
-8. `api/jobs.py`, then `api/app.py`, then `static/app.js` for the web layer.
+8. `api/jobs.py`, `api/state_view.py`, then `api/app.py`, then `static/app.js` for
+   the web layer.
 
 ### The five ideas that hold it together
 
