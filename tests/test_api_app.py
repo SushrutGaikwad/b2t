@@ -185,6 +185,29 @@ def test_index_has_editor_and_buttons():
     assert "codemirror" in text.lower()
 
 
+def test_index_references_no_external_resources():
+    # The app must run fully offline (campus server, locally hosted models), so
+    # the page must not pull any asset from the network.
+    text = _client().get("/").text
+    assert "http://" not in text
+    assert "https://" not in text
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/vendor/codemirror/codemirror.min.css",
+        "/vendor/codemirror/material-darker.min.css",
+        "/vendor/codemirror/codemirror.min.js",
+        "/vendor/codemirror/simple.min.js",
+    ],
+)
+def test_vendored_codemirror_is_served(path):
+    resp = _client().get(path)
+    assert resp.status_code == 200
+    assert resp.content
+
+
 def test_models_endpoint_lists_open_models_with_labels():
     from b2t.config import DEFAULT_MODEL, OPEN_MODELS
 
