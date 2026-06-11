@@ -259,8 +259,8 @@ def test_llm_nodes_endpoint_lists_convert_with_versions():
     body = _client().get("/api/llm-nodes").json()
     convert = next(n for n in body["nodes"] if n["node"] == "convert")
     assert convert["default_version"] == "v1"
-    assert "v1" in [v["id"] for v in convert["versions"]]
-    assert all(v["label"] for v in convert["versions"])
+    v1 = next(v for v in convert["versions"] if v["id"] == "v1")
+    assert v1["label"] == "v1"
 
 
 def test_choices_validation_rejects_unknown_node():
