@@ -26,7 +26,12 @@ def convert_node(state: PipelineState, client: LLMClient) -> dict:
         state,
         "convert",
         client,
-        {"reference": reference, "guides": guides, "source": state.stripped_tex},
+        {
+            "reference": reference,
+            "guides": guides,
+            "source": state.stripped_tex,
+            "aspect_ratio": state.aspect_ratio,
+        },
     )
     logger.info("conversion returned {} chars of Typst", len(output))
     return {

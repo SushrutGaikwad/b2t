@@ -90,7 +90,7 @@ def test_run_job_records_llm_runs(tmp_path):
     rec = store.get(job.id)
     assert rec.llm_runs["convert"] == {
         "model": DEFAULT_MODEL,
-        "prompt_version": "v1",
+        "prompt_version": "v2",
     }
 
 

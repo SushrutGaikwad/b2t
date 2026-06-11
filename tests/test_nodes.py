@@ -36,6 +36,7 @@ def test_clean_build_node(deck_copy):
 def test_detect_main_node(deck_copy):
     update = detect_main(_state(work_dir=deck_copy))
     assert update["main_tex"] == deck_copy / "main.tex"
+    assert update["aspect_ratio"] == "4-3"
 
 
 def test_flatten_node(deck_copy):
@@ -106,12 +107,26 @@ def test_convert_node_passes_math_guide_in_user_message():
     assert "Writing Math Equations in Typst" in captured["user"]
 
 
+def test_convert_node_passes_aspect_ratio_into_prompt():
+    from b2t.nodes.convert import convert_node
+
+    captured = {}
+
+    class Recorder:
+        def complete(self, system, user, model):
+            captured["user"] = user
+            return "= ok\n"
+
+    convert_node(_state(stripped_tex="x", aspect_ratio="16-9"), client=Recorder())
+    assert '"16-9"' in captured["user"]
+
+
 def test_convert_node_records_provenance():
     from b2t.llm import FakeClient
     from b2t.nodes.convert import convert_node
 
     update = convert_node(_state(stripped_tex="x"), client=FakeClient("= ok\n"))
-    assert update["llm_runs"]["convert"].prompt_version == "v1"
+    assert update["llm_runs"]["convert"].prompt_version == "v2"
 
 
 def test_convert_node_records_rendered_prompt():

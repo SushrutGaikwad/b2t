@@ -43,6 +43,7 @@ class PipelineState(BaseModel):
     # strip_overlays)
     removed_build_files: list[Path] = Field(default_factory=list)
     main_tex: Path | None = None
+    aspect_ratio: str = "4-3"
     included_tex: list[Path] = Field(default_factory=list)
     image_files: list[Path] = Field(default_factory=list)
     flattened_tex: str | None = None

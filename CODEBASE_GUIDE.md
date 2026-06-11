@@ -196,7 +196,7 @@ b2t/
       strip_overlays.py  convert.py  write_output.py  compile.py
 
     latex/                the deterministic LaTeX logic the nodes call
-      cleanup.py  detect.py  includes.py  flatten.py  overlays.py
+      aspect.py  cleanup.py  detect.py  includes.py  flatten.py  overlays.py
 
     api/                  the web layer
       app.py              FastAPI app + HTTP endpoints (web entry point)
@@ -206,8 +206,9 @@ b2t/
       static/             index.html, app.js, style.css (the browser UI)
 
   prompts/                the prompt registry (versioned AI wording, see section 7)
-    defaults.json         { "convert": "v1" }: the default version per node
-    convert/v1.toml       the convert node's prompt: description, system, user_template
+    defaults.json         { "convert": "v2" }: the default version per node
+    convert/v1.toml       the original convert prompt (kept for history)
+    convert/v2.toml       the default: adds the aspect-ratio directive
 
   files/                  data the converter reads (not code)
     reference/touying_reference_presentation.typ   the canonical example deck
@@ -218,7 +219,7 @@ b2t/
     specs/                one design document per feature
     plans/                one step-by-step implementation plan per feature
 
-  tests/                  pytest suite (142 tests across 20 files) + fixtures
+  tests/                  pytest suite (160 tests across 21 files) + fixtures
     conftest.py           shared fixture (a writable copy of the sample deck)
     fixtures/sample_deck/ a minimal Beamer deck used throughout the tests
     test_*.py             one test module per source module
@@ -281,6 +282,7 @@ flowchart TB
     subgraph Disc ["Deterministic discoveries"]
         d1["removed_build_files: list[Path]"]
         d2["main_tex: Path | None"]
+        d2a["aspect_ratio: str"]
         d3["included_tex: list[Path]"]
         d4["image_files: list[Path]"]
         d5["flattened_tex: str | None"]
@@ -313,6 +315,8 @@ What each field means:
 - **Deterministic discoveries** (filled in by the plain-Python nodes):
   - `removed_build_files` - build artifacts that were deleted.
   - `main_tex` - the detected main Beamer file.
+  - `aspect_ratio` - the Touying aspect ratio ("4-3", "16-9", ...) read from
+    the beamer documentclass; defaults to "4-3".
   - `included_tex` - the `\input`/`\include`d files found.
   - `image_files` - the images the deck references.
   - `flattened_tex` - all the LaTeX merged into one string.
@@ -503,10 +507,10 @@ file:
 
 ```txt
 prompts/
-  defaults.json          { "convert": "v1" }   the default version per node
+  defaults.json          { "convert": "v2" }   the default version per node
   convert/
-    v1.toml              description, system, user_template
-    v2.toml              (a future version would go here)
+    v1.toml              the original prompt (kept for history)
+    v2.toml              the default: adds the aspect-ratio directive
 ```
 
 Each version file is **TOML** (a simple config format read with Python's built-in
@@ -538,11 +542,14 @@ Typst characters like `\frac` and `$` need no escaping.
   raises `FileNotFoundError` if the file is missing and `KeyError` if `system` or
   `user_template` is absent.
 
-The `convert/v1.toml` prompt holds today's only AI instruction: a `system` message
-that says "convert Beamer to Typst Touying using the university theme, follow the
-reference and the math guide, output only Typst, never use overlays", and a
-`user_template` that stacks the reference deck, the guides, and the source via the
-tokens `{{reference}}`, `{{guides}}`, and `{{source}}`.
+The default `convert/v2.toml` prompt holds today's only AI instruction: a `system`
+message that says "convert Beamer to Typst Touying using the university theme,
+follow the reference and the math guide, output only Typst, never use overlays",
+and a `user_template` that stacks the reference deck, the guides, an aspect-ratio
+directive, and the source via the tokens `{{reference}}`, `{{guides}}`,
+`{{aspect_ratio}}`, and `{{source}}`. (`v1` is the same prompt without the
+aspect-ratio directive, kept for provenance; the convert node always supplies the
+`aspect_ratio` value, which `v1` simply ignores.)
 
 ### 7.3 `nodes/_llm.py` - the shared runner
 
@@ -650,10 +657,10 @@ what.
 | --- | ---------------- | ------------------------------------------- | ---------------------------------------------- | -------------------------------------------------------- |
 | 1   | `copy_input`     | `input_dir`                                 | `work_dir`                                     | (stdlib only)                                            |
 | 2   | `clean_build`    | `work_dir`                                  | `removed_build_files`                          | `latex.cleanup.remove_build_files`                       |
-| 3   | `detect_main`    | `work_dir`                                  | `main_tex`                                     | `latex.detect.find_main_tex`                             |
+| 3   | `detect_main`    | `work_dir`                                  | `main_tex`, `aspect_ratio`                     | `latex.detect.find_main_tex`, `latex.aspect.aspect_ratio` |
 | 4   | `flatten`        | `main_tex`                                  | `included_tex`, `image_files`, `flattened_tex` | `latex.includes.parse_includes`, `latex.flatten.flatten` |
 | 5   | `strip_overlays` | `flattened_tex`                             | `stripped_tex`                                 | `latex.overlays.strip_overlays`                          |
-| 6   | `convert`        | `stripped_tex`, `llm_choices`               | `typst_source`, `llm_runs`, `llm_rendered`     | `nodes._llm.run_prompt`, `typst_output.strip_code_fence` |
+| 6   | `convert`        | `stripped_tex`, `aspect_ratio`, `llm_choices` | `typst_source`, `llm_runs`, `llm_rendered`   | `nodes._llm.run_prompt`, `typst_output.strip_code_fence` |
 | 7   | `write_output`   | `typst_source`, `image_files`, `output_dir` | `typst_path`, `typst_source`                   | `typst_images.fix_image_paths`                           |
 | 8   | `compile`        | `typst_path`                                | `compiled`, `pdf_path`, `compile_error`        | `typst_runner.compile_typst`                             |
 
@@ -676,9 +683,11 @@ from the *copy* so they do not confuse later steps.
 
 ### 9.3 `detect_main.py` - `detect_main(state)`
 
-Returns `{"main_tex": find_main_tex(state.work_dir)}`. The helper (section 10.2)
+Returns `{"main_tex": ..., "aspect_ratio": ...}`. `find_main_tex` (section 10.2)
 raises if it cannot find **exactly one** Beamer main file, so a malformed deck
-fails loudly here rather than guessing.
+fails loudly here rather than guessing. It then reads that file's
+`\documentclass` aspectratio via `latex.aspect.aspect_ratio` (section 10.6) and
+records the matching Touying aspect ratio for the convert node to honor.
 
 ### 9.4 `flatten.py` - `flatten_node(state)`
 
@@ -705,9 +714,10 @@ The AI node, and the only one with a second parameter (`client`), which is why
 `build_graph` binds it with `partial`. It:
 
 1. Reads the reference deck and the math guide from disk (paths from `config.py`).
-2. Calls `run_prompt(state, "convert", client, {reference, guides, source})`
-   (section 7.3), which resolves the model and prompt version, renders the prompt,
-   calls the client, and returns the output plus the provenance and rendered prompt.
+2. Calls `run_prompt(state, "convert", client, {reference, guides, source,
+   aspect_ratio})` (section 7.3), which resolves the model and prompt version,
+   renders the prompt, calls the client, and returns the output plus the
+   provenance and rendered prompt.
 3. Passes the model output through `strip_code_fence` (section 11.3) to remove a
    markdown ```` ```typst ... ``` ```` wrapper if the model added one.
 4. Returns `{"typst_source": ..., "llm_runs": {..., "convert": run},
@@ -830,6 +840,16 @@ The result is overlay-free LaTeX with all the actual content preserved.
 flowchart LR
     A["\onslide<2->{Some text}<br/>\pause<br/>\item<1-> Point"] -->|strip_overlays| B["Some text<br/><br/>\item Point"]
 ```
+
+### 10.6 `aspect.py` - reading the slide aspect ratio
+
+- `aspect_ratio(main_tex) -> str` - finds the `aspectratio=NNN` option in the
+  beamer `\documentclass` and maps it to a Touying aspect-ratio string: `43` and a
+  missing option both give `"4-3"`, `169` gives `"16-9"`, `1610` gives `"16-10"`,
+  and so on for beamer's documented codes. Unknown codes fall back to `"4-3"`. The
+  `detect_main` node calls this and stores the result, and the convert node passes
+  it to the model so the generated Touying deck keeps the source deck's shape.
+  Touying 0.7.3 accepts any `"W-H"` ratio, so the non-standard sizes still compile.
 
 ---
 
@@ -1272,7 +1292,7 @@ sequenceDiagram
 
 ## 16. The tests (`tests/`)
 
-The suite has **142 tests** across 20 files, one test module per source module, and
+The suite has **160 tests** across 21 files, one test module per source module, and
 it runs in a few seconds. `conftest.py` provides a `deck_copy` fixture: a writable
 copy of the sample deck in a temp directory, so tests never mutate the fixture
 itself.

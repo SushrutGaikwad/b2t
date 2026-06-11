@@ -1,6 +1,6 @@
-# Blank so the version dropdown shows the id ("v1"); add a short label here
-# when a later version needs distinguishing.
-description = "v1 - simple prompt"
+# v2 adds the aspect-ratio directive so the generated deck matches the source
+# beamer aspectratio. v1 is kept unchanged for provenance and history.
+description = "v2 - handle aspect ratio"
 
 system = '''You convert LaTeX Beamer source into a Typst Touying presentation using the university theme. Use the provided reference presentation as the canonical structure and preamble. Follow the provided guides, especially for writing math equations in Typst syntax. Output only Typst source, with no commentary. Never use overlays or pause functionality.'''
 
@@ -12,6 +12,8 @@ Reference Touying presentation:
 Guides:
 
 {{guides}}
+
+Set the aspect-ratio argument in the university-theme.with(...) call to "{{aspect_ratio}}", overriding the value shown in the reference deck.
 
 Convert this Beamer source to a Typst Touying deck:
 

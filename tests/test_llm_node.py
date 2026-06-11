@@ -12,14 +12,14 @@ def _state(**kwargs) -> PipelineState:
     return PipelineState(**base)
 
 
-_VALUES = {"reference": "R", "guides": "G", "source": "SRC"}
+_VALUES = {"reference": "R", "guides": "G", "source": "SRC", "aspect_ratio": "4-3"}
 
 
 def test_run_prompt_uses_defaults_and_returns_run(monkeypatch):
     monkeypatch.delenv("B2T_MODEL", raising=False)
     out, run, rendered = run_prompt(_state(), "convert", FakeClient("OUT"), _VALUES)
     assert out == "OUT"
-    assert run == NodeRun(model=DEFAULT_MODEL, prompt_version="v1")
+    assert run == NodeRun(model=DEFAULT_MODEL, prompt_version="v2")
     assert "SRC" in rendered.user
     assert rendered.system
 

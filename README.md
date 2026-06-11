@@ -54,7 +54,8 @@ deterministic.
    `.log`, `.nav`, `.toc`, `.synctex.gz`, and similar) from the working copy.
 3. `detect_main` (deterministic): Finds the single `.tex` that declares a
    Beamer document (`\documentclass`, `beamer`, `\begin{document}`). Fails
-   loudly unless exactly one is found.
+   loudly unless exactly one is found, and reads its `aspectratio` option so the
+   output keeps the source's shape (4:3, 16:9, 16:10, ...).
 4. `flatten` (deterministic): Parses the include graph (`\input`, `\include`,
    `\includegraphics`), records referenced image files, and expands every
    include into one LaTeX string.
@@ -63,8 +64,8 @@ deterministic.
    the wrapped content. The output never uses overlays.
 6. `convert` (LLM): The single model call. Translates the flattened,
    overlay-free Beamer source into Typst Touying source, using the reference
-   presentation and the Typst math guide as context. A markdown code fence
-   wrapping the whole answer is stripped deterministically.
+   presentation, the Typst math guide, and the detected aspect ratio as context.
+   A markdown code fence wrapping the whole answer is stripped deterministically.
 7. `write_output` (deterministic): Normalizes `image()` references to the
    copied filenames (with extension), writes `main.typ` to the output
    directory, and copies the referenced images alongside it.

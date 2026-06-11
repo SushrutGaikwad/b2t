@@ -258,9 +258,11 @@ def test_real_job_without_key_records_failed(monkeypatch):
 def test_llm_nodes_endpoint_lists_convert_with_versions():
     body = _client().get("/api/llm-nodes").json()
     convert = next(n for n in body["nodes"] if n["node"] == "convert")
-    assert convert["default_version"] == "v1"
+    assert convert["default_version"] == "v2"
     v1 = next(v for v in convert["versions"] if v["id"] == "v1")
-    assert v1["label"] == "v1"
+    assert v1["label"] == "v1 - simple prompt"
+    v2 = next(v for v in convert["versions"] if v["id"] == "v2")
+    assert v2["label"] == "v2 - handle aspect ratio"
 
 
 def test_choices_validation_rejects_unknown_node():
@@ -328,7 +330,7 @@ def test_rendered_prompt_available_after_run():
     client = _client()
     job_id = _run_sample(client)
     body = client.get(f"/api/jobs/{job_id}/prompt/convert").json()
-    assert body["prompt_version"] == "v1"
+    assert body["prompt_version"] == "v2"
     assert "You convert LaTeX Beamer" in body["system"]
     assert "Reference Touying presentation" in body["user"]
 
