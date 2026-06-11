@@ -19,7 +19,7 @@
 
 #show: university-theme.with(
   align: horizon,
-  aspect-ratio: "16-9",
+  aspect-ratio: "4-3",
   config-common(frozen-counters: (theorem-counter,), slide-level: 2),
   config-info(
     title: [Main Title of the Presentation],
