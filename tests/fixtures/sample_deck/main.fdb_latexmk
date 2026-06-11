@@ -1,5 +1,5 @@
 # Fdb version 4
-["pdflatex"] 1780721143.05672 "d:/projects/b2t/tests/fixtures/sample_deck/main.tex" "main.pdf" "main" 1780721144.2356 0
+["pdflatex"] 1781149181.31982 "d:/projects/b2t/tests/fixtures/sample_deck/main.tex" "main.pdf" "main" 1781149182.54858 0
   "c:/texlive/2026/texmf-dist/fonts/map/fontname/texfonts.map" 1777836139 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "c:/texlive/2026/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm" 1777833014 1004 54797486969f23fa377b128694d548df ""
   "c:/texlive/2026/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex8.tfm" 1777833014 988 bdf658c3bfc2d96d3c8b02cfc1c94c20 ""
@@ -189,13 +189,13 @@
   "c:/texlive/2026/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1778081755 5619402 ad1310ccf7f36101ef3e8f014a173c46 ""
   "c:/texlive/2026/texmf-var/web2c/pdftex/pdflatex.fmt" 1778081876 3648461 d1c96cb263f1b0fa91a37af4b73ea6b2 ""
   "c:/texlive/2026/texmf.cnf" 1777843011 713 614551405fc44b98efbf516466e3c909 ""
-  "d:/projects/b2t/tests/fixtures/sample_deck/main.tex" 1780632118 396 f07f797d93ca6e356612e26645a18c72 ""
+  "d:/projects/b2t/tests/fixtures/sample_deck/main.tex" 1781149180 396 f07f797d93ca6e356612e26645a18c72 ""
   "intro.tex" 1780467550 819 c245e4d6f49698461d49bcfdad04d692 ""
   "logo.png" 1779247074 33645 ff9bb7ebc52d077d9e0c120b9101f973 ""
-  "main.aux" 1780721144 1367 2de3f026ab8508095c3481dc4fd38190 "pdflatex"
-  "main.nav" 1780721144 815 75d6fe3bd1696e04f6a00d35aeea8e89 "pdflatex"
-  "main.out" 1780721144 103 47949ac7c3dcedddeefe3cd50587dda1 "pdflatex"
-  "main.tex" 1780632118 396 f07f797d93ca6e356612e26645a18c72 ""
+  "main.aux" 1781149182 1367 2de3f026ab8508095c3481dc4fd38190 "pdflatex"
+  "main.nav" 1781149182 815 75d6fe3bd1696e04f6a00d35aeea8e89 "pdflatex"
+  "main.out" 1781149182 103 47949ac7c3dcedddeefe3cd50587dda1 "pdflatex"
+  "main.tex" 1781149180 396 f07f797d93ca6e356612e26645a18c72 ""
   (generated)
   "main.aux"
   "main.log"
