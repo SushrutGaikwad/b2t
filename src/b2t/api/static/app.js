@@ -162,6 +162,24 @@ function buildCard(node) {
   return card;
 }
 
+function renderLines(container, text) {
+  container.textContent = "";
+  const frag = document.createDocumentFragment();
+  text.split("\n").forEach((line, i) => {
+    const row = document.createElement("div");
+    row.className = "code-row";
+    const num = document.createElement("span");
+    num.className = "code-ln";
+    num.textContent = i + 1;
+    const content = document.createElement("span");
+    content.className = "code-line";
+    content.textContent = line;
+    row.append(num, content);
+    frag.appendChild(row);
+  });
+  container.appendChild(frag);
+}
+
 function buildPreview(nodeName, getVersion) {
   const wrap = document.createElement("div");
   wrap.className = "prompt-preview";
@@ -180,7 +198,7 @@ function buildPreview(nodeName, getVersion) {
 
   const note = document.createElement("div");
   note.className = "preview-note";
-  const body = document.createElement("pre");
+  const body = document.createElement("div");
   body.className = "preview-body";
 
   wrap.append(tabs, note, body);
@@ -194,7 +212,7 @@ function buildPreview(nodeName, getVersion) {
       const r = await fetch(`/api/prompts/${nodeName}/${getVersion()}`);
       if (!r.ok) throw new Error();
       const d = await r.json();
-      body.textContent = `# system\n${d.system}\n\n# user_template\n${d.user_template}`;
+      renderLines(body, `# system\n${d.system}\n\n# user_template\n${d.user_template}`);
     } catch (e) {
       body.textContent = "(failed to load prompt)";
     }
@@ -213,7 +231,7 @@ function buildPreview(nodeName, getVersion) {
       if (!r.ok) throw new Error();
       const d = await r.json();
       note.textContent = `as run: ${d.model}, ${d.prompt_version}`;
-      body.textContent = `# system\n${d.system}\n\n# user\n${d.user}`;
+      renderLines(body, `# system\n${d.system}\n\n# user\n${d.user}`);
     } catch (e) {
       note.textContent = "run the pipeline to see the rendered prompt";
       body.textContent = "";
