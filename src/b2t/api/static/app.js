@@ -162,7 +162,10 @@ function buildCard(node) {
   return card;
 }
 
-function renderLines(container, text) {
+// Render text into a line-numbered gutter, one flex row per line. An optional
+// highlight(line) -> html escapes and colors each line (used by the inspector);
+// without it, the line is inserted as plain text.
+function renderLines(container, text, highlight) {
   container.textContent = "";
   const frag = document.createDocumentFragment();
   text.split("\n").forEach((line, i) => {
@@ -173,7 +176,8 @@ function renderLines(container, text) {
     num.textContent = i + 1;
     const content = document.createElement("span");
     content.className = "code-line";
-    content.textContent = line;
+    if (highlight) content.innerHTML = highlight(line);
+    else content.textContent = line;
     row.append(num, content);
     frag.appendChild(row);
   });
@@ -440,7 +444,12 @@ function highlightJson(json) {
 }
 
 function setViewer(text) {
-  $("inspector-viewer").innerHTML = highlightJson(text);
+  const viewer = $("inspector-viewer");
+  if (!text) {
+    viewer.textContent = "";
+    return;
+  }
+  renderLines(viewer, text, highlightJson);
 }
 
 function hideInspector() {
