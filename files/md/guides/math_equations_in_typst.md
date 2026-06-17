@@ -46,12 +46,12 @@ Here `pi`, `dot`, and `RR` are recognized symbol names (because they are multipl
 
 So the rule for the conversion agent is: whenever LaTeX has two or more single-letter variables written next to each other, insert a space between each pair in the Typst output.
 
-| LaTeX   | Wrong Typst | Correct Typst | Why                                                        |
-| ------- | ----------- | ------------- | ---------------------------------------------------------- |
-| `$xy$`  | `$xy$`      | `$x y$`       | `xy` (no space) is treated as a single unknown name `xy`.  |
-| `$abc$` | `$abc$`     | `$a b c$`     | `abc` would be one name; spaces make it `a` times `b` times `c`. |
-| `$2x$`  | —           | `$2 x$` or `$2x$` | A number then a letter is fine either way, but a space is safe and clear. |
-| `$xy^2$`| `$xy^2$`    | `$x y^2$`     | Keep the product spaced even with attachments.             |
+| LaTeX    | Wrong Typst | Correct Typst     | Why                                                                       |
+| -------- | ----------- | ----------------- | ------------------------------------------------------------------------- |
+| `$xy$`   | `$xy$`      | `$x y$`           | `xy` (no space) is treated as a single unknown name `xy`.                 |
+| `$abc$`  | `$abc$`     | `$a b c$`         | `abc` would be one name; spaces make it `a` times `b` times `c`.          |
+| `$2x$`   | —           | `$2 x$` or `$2x$` | A number then a letter is fine either way, but a space is safe and clear. |
+| `$xy^2$` | `$xy^2$`    | `$x y^2$`         | Keep the product spaced even with attachments.                            |
 
 Remember that the space *inside* the dollar signs is what separates the two display modes (section 1). The multiplication space goes **between the letters**, so both forms still work:
 
@@ -416,56 +416,56 @@ Shorthands are short character sequences that Typst automatically interprets as 
 
 ### 15.1 Markup-mode shorthands (outside `$...$`)
 
-| Shorthand | Result | Name        | Meaning              |
-| --------- | ------ | ----------- | -------------------- |
-| `--`      | –      | `dash.en`   | en dash              |
-| `---`     | —      | `dash.em`   | em dash              |
-| `...`     | …      | `dots.h`    | horizontal ellipsis  |
-| `-?`      | (shy)  | `hyph.soft` | soft hyphen          |
-| `-`       | −      | `minus`     | minus sign           |
-| `~`       | (nbsp) | `space.nobreak` | non-breaking space |
+| Shorthand | Result | Name            | Meaning             |
+| --------- | ------ | --------------- | ------------------- |
+| `--`      | –      | `dash.en`       | en dash             |
+| `---`     | —      | `dash.em`       | em dash             |
+| `...`     | …      | `dots.h`        | horizontal ellipsis |
+| `-?`      | (shy)  | `hyph.soft`     | soft hyphen         |
+| `-`       | −      | `minus`         | minus sign          |
+| `~`       | (nbsp) | `space.nobreak` | non-breaking space  |
 
 ### 15.2 Math-mode shorthands (inside `$...$`)
 
-| Shorthand | Result | Equivalent symbol         | Common LaTeX     |
-| --------- | ------ | ------------------------- | ---------------- |
-| `->`      | →      | `arrow.r`                 | `\to`, `\rightarrow` |
-| `\|->`    | ↦      | `arrow.r.bar` / `mapsto`  | `\mapsto`        |
-| `=>`      | ⇒      | `arrow.r.double`          | `\Rightarrow`    |
-| `\|=>`    | ⤇      | `arrow.r.double.bar`      |                  |
-| `==>`     | ⟹      | `arrow.r.double.long`     | `\Longrightarrow` |
-| `-->`     | ⟶      | `arrow.r.long`            | `\longrightarrow` |
-| `~~>`     | ⟿      | `arrow.r.long.squiggly`   |                  |
-| `~>`      | ⇝      | `arrow.r.squiggly`        | `\rightsquigarrow` |
-| `>->`     | ↣      | `arrow.r.tail`            | `\rightarrowtail` |
-| `->>`     | ↠      | `arrow.r.twohead`         | `\twoheadrightarrow` |
-| `<-`      | ←      | `arrow.l`                 | `\gets`, `\leftarrow` |
-| `<==`     | ⟸      | `arrow.l.double.long`     | `\Longleftarrow` |
-| `<--`     | ⟵      | `arrow.l.long`            | `\longleftarrow` |
-| `<~~`     | ⬳      | `arrow.l.long.squiggly`   |                  |
-| `<~`      | ⇜      | `arrow.l.squiggly`        |                  |
-| `<-<`     | ↢      | `arrow.l.tail`            | `\leftarrowtail` |
-| `<<-`     | ↞      | `arrow.l.twohead`         | `\twoheadleftarrow` |
-| `<=>`     | ⇔      | `arrow.l.r.double`        | `\Leftrightarrow` |
-| `<==>`    | ⟺      | `arrow.l.r.double.long`   | `\Longleftrightarrow` |
-| `<-->`    | ⟷      | `arrow.l.r.long`          | `\longleftrightarrow` |
-| `*`       | ∗      | `ast.op`                  | `\ast`           |
-| `\|\|`    | ‖      | `bar.v.double`            | `\Vert`          |
-| `[\|`     | ⟦      | `bracket.l.double`        | `\llbracket`     |
-| `\|]`     | ⟧      | `bracket.r.double`        | `\rrbracket`     |
-| `:=`      | ≔      | `colon.eq`                | `\coloneqq`      |
-| `::=`     | ⩴      | `colon.double.eq`         |                  |
-| `...`     | …      | `dots.h`                  | `\ldots`, `\dots` |
-| `=:`      | ≕      | `eq.colon`                | `\eqqcolon`      |
-| `!=`      | ≠      | `eq.not`                  | `\neq`           |
-| `>>`      | ≫      | `gt.double`               | `\gg`            |
-| `>=`      | ≥      | `gt.eq`                   | `\geq`           |
-| `>>>`     | ⋙      | `gt.triple`               | `\ggg`           |
-| `<<`      | ≪      | `lt.double`               | `\ll`            |
-| `<=`      | ≤      | `lt.eq`                   | `\leq`           |
-| `<<<`     | ⋘      | `lt.triple`               | `\lll`           |
-| `-`       | −      | `minus`                   | `-`              |
-| `~`       | ∼      | `tilde.op`                | `\sim`           |
+| Shorthand | Result | Equivalent symbol        | Common LaTeX          |
+| --------- | ------ | ------------------------ | --------------------- |
+| `->`      | →      | `arrow.r`                | `\to`, `\rightarrow`  |
+| `\|->`    | ↦      | `arrow.r.bar` / `mapsto` | `\mapsto`             |
+| `=>`      | ⇒      | `arrow.r.double`         | `\Rightarrow`         |
+| `\|=>`    | ⤇      | `arrow.r.double.bar`     |                       |
+| `==>`     | ⟹      | `arrow.r.double.long`    | `\Longrightarrow`     |
+| `-->`     | ⟶      | `arrow.r.long`           | `\longrightarrow`     |
+| `~~>`     | ⟿      | `arrow.r.long.squiggly`  |                       |
+| `~>`      | ⇝      | `arrow.r.squiggly`       | `\rightsquigarrow`    |
+| `>->`     | ↣      | `arrow.r.tail`           | `\rightarrowtail`     |
+| `->>`     | ↠      | `arrow.r.twohead`        | `\twoheadrightarrow`  |
+| `<-`      | ←      | `arrow.l`                | `\gets`, `\leftarrow` |
+| `<==`     | ⟸      | `arrow.l.double.long`    | `\Longleftarrow`      |
+| `<--`     | ⟵      | `arrow.l.long`           | `\longleftarrow`      |
+| `<~~`     | ⬳      | `arrow.l.long.squiggly`  |                       |
+| `<~`      | ⇜      | `arrow.l.squiggly`       |                       |
+| `<-<`     | ↢      | `arrow.l.tail`           | `\leftarrowtail`      |
+| `<<-`     | ↞      | `arrow.l.twohead`        | `\twoheadleftarrow`   |
+| `<=>`     | ⇔      | `arrow.l.r.double`       | `\Leftrightarrow`     |
+| `<==>`    | ⟺      | `arrow.l.r.double.long`  | `\Longleftrightarrow` |
+| `<-->`    | ⟷      | `arrow.l.r.long`         | `\longleftrightarrow` |
+| `*`       | ∗      | `ast.op`                 | `\ast`                |
+| `\|\|`    | ‖      | `bar.v.double`           | `\Vert`               |
+| `[\|`     | ⟦      | `bracket.l.double`       | `\llbracket`          |
+| `\|]`     | ⟧      | `bracket.r.double`       | `\rrbracket`          |
+| `:=`      | ≔      | `colon.eq`               | `\coloneqq`           |
+| `::=`     | ⩴      | `colon.double.eq`        |                       |
+| `...`     | …      | `dots.h`                 | `\ldots`, `\dots`     |
+| `=:`      | ≕      | `eq.colon`               | `\eqqcolon`           |
+| `!=`      | ≠      | `eq.not`                 | `\neq`                |
+| `>>`      | ≫      | `gt.double`              | `\gg`                 |
+| `>=`      | ≥      | `gt.eq`                  | `\geq`                |
+| `>>>`     | ⋙      | `gt.triple`              | `\ggg`                |
+| `<<`      | ≪      | `lt.double`              | `\ll`                 |
+| `<=`      | ≤      | `lt.eq`                  | `\leq`                |
+| `<<<`     | ⋘      | `lt.triple`              | `\lll`                |
+| `-`       | −      | `minus`                  | `-`                   |
+| `~`       | ∼      | `tilde.op`               | `\sim`                |
 
 ## 16. Named symbol reference (the `sym` module)
 
@@ -480,24 +480,24 @@ Key conventions:
 
 ### 16.1 Greek letters, lowercase
 
-| Typst        | Glyph | LaTeX        | Typst        | Glyph | LaTeX        |
-| ------------ | ----- | ------------ | ------------ | ----- | ------------ |
-| `alpha`      | α     | `\alpha`     | `nu`         | ν     | `\nu`        |
-| `beta`       | β     | `\beta`      | `xi`         | ξ     | `\xi`        |
-| `beta.alt`   | ϐ     | `\varbeta`   | `omicron`    | ο     | `\omicron`   |
-| `gamma`      | γ     | `\gamma`     | `pi`         | π     | `\pi`        |
-| `delta`      | δ     | `\delta`     | `pi.alt`     | ϖ     | `\varpi`     |
-| `epsilon`    | ε     | `\epsilon`   | `rho`        | ρ     | `\rho`       |
-| `epsilon.alt`| ϵ     | `\varepsilon`| `rho.alt`    | ϱ     | `\varrho`    |
-| `zeta`       | ζ     | `\zeta`      | `sigma`      | σ     | `\sigma`     |
-| `eta`        | η     | `\eta`       | `sigma.alt`  | ς     | `\varsigma`  |
-| `theta`      | θ     | `\theta`     | `tau`        | τ     | `\tau`       |
-| `theta.alt`  | ϑ     | `\vartheta`  | `upsilon`    | υ     | `\upsilon`   |
-| `iota`       | ι     | `\iota`      | `phi`        | φ     | `\phi`       |
-| `kappa`      | κ     | `\kappa`     | `phi.alt`    | ϕ     | `\varphi`    |
-| `kappa.alt`  | ϰ     | `\varkappa`  | `chi`        | χ     | `\chi`       |
-| `lambda`     | λ     | `\lambda`    | `psi`        | ψ     | `\psi`       |
-| `mu`         | μ     | `\mu`        | `omega`      | ω     | `\omega`     |
+| Typst         | Glyph | LaTeX         | Typst       | Glyph | LaTeX       |
+| ------------- | ----- | ------------- | ----------- | ----- | ----------- |
+| `alpha`       | α     | `\alpha`      | `nu`        | ν     | `\nu`       |
+| `beta`        | β     | `\beta`       | `xi`        | ξ     | `\xi`       |
+| `beta.alt`    | ϐ     | `\varbeta`    | `omicron`   | ο     | `\omicron`  |
+| `gamma`       | γ     | `\gamma`      | `pi`        | π     | `\pi`       |
+| `delta`       | δ     | `\delta`      | `pi.alt`    | ϖ     | `\varpi`    |
+| `epsilon`     | ε     | `\epsilon`    | `rho`       | ρ     | `\rho`      |
+| `epsilon.alt` | ϵ     | `\varepsilon` | `rho.alt`   | ϱ     | `\varrho`   |
+| `zeta`        | ζ     | `\zeta`       | `sigma`     | σ     | `\sigma`    |
+| `eta`         | η     | `\eta`        | `sigma.alt` | ς     | `\varsigma` |
+| `theta`       | θ     | `\theta`      | `tau`       | τ     | `\tau`      |
+| `theta.alt`   | ϑ     | `\vartheta`   | `upsilon`   | υ     | `\upsilon`  |
+| `iota`        | ι     | `\iota`       | `phi`       | φ     | `\phi`      |
+| `kappa`       | κ     | `\kappa`      | `phi.alt`   | ϕ     | `\varphi`   |
+| `kappa.alt`   | ϰ     | `\varkappa`   | `chi`       | χ     | `\chi`      |
+| `lambda`      | λ     | `\lambda`     | `psi`       | ψ     | `\psi`      |
+| `mu`          | μ     | `\mu`         | `omega`     | ω     | `\omega`    |
 
 Also available: `digamma` ϝ, `kai` ϗ.
 
@@ -521,179 +521,179 @@ The full set `AA` through `ZZ` exists for every letter. Related: `Re` ℜ (`\Re`
 
 ### 16.4 Binary operators
 
-| Typst          | Glyph | LaTeX        | Typst             | Glyph | LaTeX        |
-| -------------- | ----- | ------------ | ----------------- | ----- | ------------ |
-| `plus`         | +     | `+`          | `and`             | ∧     | `\wedge`     |
-| `minus`        | −     | `-`          | `or`              | ∨     | `\vee`       |
-| `plus.minus`   | ±     | `\pm`        | `union`           | ∪     | `\cup`       |
-| `minus.plus`   | ∓     | `\mp`        | `sect` / `inter`  | ∩     | `\cap`       |
-| `times`        | ×     | `\times`     | `union.sq`        | ⊔     | `\sqcup`     |
-| `div`          | ÷     | `\div`       | `sect.sq`         | ⊓     | `\sqcap`     |
-| `dot.op`       | ⋅     | `\cdot`      | `union.plus`      | ⊎     | `\uplus`     |
-| `ast.op`       | ∗     | `\ast`       | `union.dot`       | ⊍     | `\uplus`     |
-| `star.op`      | ⋆     | `\star`      | `without`         | ∖     | `\setminus`  |
-| `compose`      | ∘     | `\circ`      | `wreath`          | ≀     | `\wr`        |
-| `bullet.op`    | ∙     | `\bullet`    | `times.l`         | ⋉     | `\ltimes`    |
-| `plus.circle`  | ⊕     | `\oplus`     | `times.r`         | ⋊     | `\rtimes`    |
-| `minus.circle` | ⊖     | `\ominus`    | `times.div`       | ⋇     | `\divideontimes` |
-| `times.circle` | ⊗     | `\otimes`    | `plus.dot`        | ∔     | `\dotplus`   |
-| `div.circle`   | ⨸     |              | `dot.circle`      | ⊙     | `\odot`      |
-| `plus.square`  | ⊞     | `\boxplus`   | `minus.square`    | ⊟     | `\boxminus`  |
-| `times.square` | ⊠     | `\boxtimes`  | `dot.square`      | ⊡     | `\boxdot`    |
-| `slash.o`      | ⊘     | `\oslash`    | `convolve`        | ∗     | `\ast`       |
+| Typst          | Glyph | LaTeX       | Typst            | Glyph | LaTeX            |
+| -------------- | ----- | ----------- | ---------------- | ----- | ---------------- |
+| `plus`         | +     | `+`         | `and`            | ∧     | `\wedge`         |
+| `minus`        | −     | `-`         | `or`             | ∨     | `\vee`           |
+| `plus.minus`   | ±     | `\pm`       | `union`          | ∪     | `\cup`           |
+| `minus.plus`   | ∓     | `\mp`       | `sect` / `inter` | ∩     | `\cap`           |
+| `times`        | ×     | `\times`    | `union.sq`       | ⊔     | `\sqcup`         |
+| `div`          | ÷     | `\div`      | `sect.sq`        | ⊓     | `\sqcap`         |
+| `dot.op`       | ⋅     | `\cdot`     | `union.plus`     | ⊎     | `\uplus`         |
+| `ast.op`       | ∗     | `\ast`      | `union.dot`      | ⊍     | `\uplus`         |
+| `star.op`      | ⋆     | `\star`     | `without`        | ∖     | `\setminus`      |
+| `compose`      | ∘     | `\circ`     | `wreath`         | ≀     | `\wr`            |
+| `bullet.op`    | ∙     | `\bullet`   | `times.l`        | ⋉     | `\ltimes`        |
+| `plus.circle`  | ⊕     | `\oplus`    | `times.r`        | ⋊     | `\rtimes`        |
+| `minus.circle` | ⊖     | `\ominus`   | `times.div`      | ⋇     | `\divideontimes` |
+| `times.circle` | ⊗     | `\otimes`   | `plus.dot`       | ∔     | `\dotplus`       |
+| `div.circle`   | ⨸     |             | `dot.circle`     | ⊙     | `\odot`          |
+| `plus.square`  | ⊞     | `\boxplus`  | `minus.square`   | ⊟     | `\boxminus`      |
+| `times.square` | ⊠     | `\boxtimes` | `dot.square`     | ⊡     | `\boxdot`        |
+| `slash.o`      | ⊘     | `\oslash`   | `convolve`       | ∗     | `\ast`           |
 
 ### 16.5 Large (n-ary) operators
 
 These grow in display style and take limits above/below. Each `.big` form is the large variant of a binary operator.
 
-| Typst            | Glyph | LaTeX       | Typst              | Glyph | LaTeX        |
-| ---------------- | ----- | ----------- | ------------------ | ----- | ------------ |
-| `sum`            | ∑     | `\sum`      | `union.big`        | ⋃     | `\bigcup`    |
-| `product`        | ∏     | `\prod`     | `inter.big` / `sect.big` | ⋂ | `\bigcap`  |
-| `product.co`     | ∐     | `\coprod`   | `and.big`          | ⋀     | `\bigwedge`  |
-| `integral`       | ∫     | `\int`      | `or.big`           | ⋁     | `\bigvee`    |
-| `integral.double`| ∬     | `\iint`     | `union.sq.big`     | ⨆     | `\bigsqcup`  |
-| `integral.triple`| ∭     | `\iiint`    | `sect.sq.big`      | ⨅     | `\bigsqcap`  |
-| `integral.cont`  | ∮     | `\oint`     | `plus.circle.big`  | ⨁     | `\bigoplus`  |
-| `integral.surf`  | ∯     | `\oiint`    | `times.circle.big` | ⨂     | `\bigotimes` |
-| `integral.vol`   | ∰     | `\oiiint`   | `dot.circle.big`   | ⨀     | `\bigodot`   |
-| `integral.cont.ccw` | ∳  |             | `union.plus.big`   | ⨄     | `\biguplus`  |
-| `integral.cont.cw`  | ∲  |             | `union.dot.big`    | ⨃     |              |
-| `integral.slash` | ⨏     | `\fint`     | `sum.integral`     | ⨋     |              |
+| Typst               | Glyph | LaTeX     | Typst                    | Glyph | LaTeX        |
+| ------------------- | ----- | --------- | ------------------------ | ----- | ------------ |
+| `sum`               | ∑     | `\sum`    | `union.big`              | ⋃     | `\bigcup`    |
+| `product`           | ∏     | `\prod`   | `inter.big` / `sect.big` | ⋂     | `\bigcap`    |
+| `product.co`        | ∐     | `\coprod` | `and.big`                | ⋀     | `\bigwedge`  |
+| `integral`          | ∫     | `\int`    | `or.big`                 | ⋁     | `\bigvee`    |
+| `integral.double`   | ∬     | `\iint`   | `union.sq.big`           | ⨆     | `\bigsqcup`  |
+| `integral.triple`   | ∭     | `\iiint`  | `sect.sq.big`            | ⨅     | `\bigsqcap`  |
+| `integral.cont`     | ∮     | `\oint`   | `plus.circle.big`        | ⨁     | `\bigoplus`  |
+| `integral.surf`     | ∯     | `\oiint`  | `times.circle.big`       | ⨂     | `\bigotimes` |
+| `integral.vol`      | ∰     | `\oiiint` | `dot.circle.big`         | ⨀     | `\bigodot`   |
+| `integral.cont.ccw` | ∳     |           | `union.plus.big`         | ⨄     | `\biguplus`  |
+| `integral.cont.cw`  | ∲     |           | `union.dot.big`          | ⨃     |              |
+| `integral.slash`    | ⨏     | `\fint`   | `sum.integral`           | ⨋     |              |
 
 Other integral variants exist: `integral.dash` ⨍, `integral.dash.double` ⨎, `integral.quad` ⨌, `integral.ccw` ⨑, `integral.cw` ∱, `integral.inter` / `integral.sect` ⨙, `integral.union` ⨚, `integral.times` ⨘, `integral.square` ⨖, `integral.arrow.hook` ⨗.
 
 ### 16.6 Relations: equality and similarity
 
-| Typst          | Glyph | LaTeX        | Typst            | Glyph | LaTeX          |
-| -------------- | ----- | ------------ | ---------------- | ----- | -------------- |
-| `eq`           | =     | `=`          | `tilde.op`       | ∼     | `\sim`         |
-| `eq.not`       | ≠     | `\neq`       | `tilde.eq`       | ≃     | `\simeq`       |
-| `eq.def`       | ≝     | `\triangleq` | `tilde.eq.not`   | ≄     | `\not\simeq`   |
-| `eq.delta`     | ≜     | `\triangleq` | `tilde.equiv`    | ≅     | `\cong`        |
-| `eq.quest`     | ≟     | `\overset{?}{=}` | `tilde.equiv.not`| ≇  | `\ncong`       |
-| `eq.colon`     | ≕     | `\eqqcolon`  | `tilde.not`      | ≁     | `\nsim`        |
-| `colon.eq`     | ≔     | `\coloneqq`  | `tilde.rev`      | ∽     | `\backsim`     |
-| `eq.triple`    | ≡     | `\equiv`     | `tilde.triple`   | ≋     |                |
-| `eq.quad`      | ≣     |              | `approx`         | ≈     | `\approx`      |
-| `equiv`        | ≡     | `\equiv`     | `approx.eq`      | ≊     | `\approxeq`    |
-| `equiv.not`    | ≢     | `\not\equiv` | `approx.not`     | ≉     | `\not\approx`  |
-| `prop`         | ∝     | `\propto`    | `asymp`          | ≍     | `\asymp`       |
-| `eq.star`      | ≛     |              | `asymp.not`      | ≭     |                |
+| Typst       | Glyph | LaTeX            | Typst             | Glyph | LaTeX         |
+| ----------- | ----- | ---------------- | ----------------- | ----- | ------------- |
+| `eq`        | =     | `=`              | `tilde.op`        | ∼     | `\sim`        |
+| `eq.not`    | ≠     | `\neq`           | `tilde.eq`        | ≃     | `\simeq`      |
+| `eq.def`    | ≝     | `\triangleq`     | `tilde.eq.not`    | ≄     | `\not\simeq`  |
+| `eq.delta`  | ≜     | `\triangleq`     | `tilde.equiv`     | ≅     | `\cong`       |
+| `eq.quest`  | ≟     | `\overset{?}{=}` | `tilde.equiv.not` | ≇     | `\ncong`      |
+| `eq.colon`  | ≕     | `\eqqcolon`      | `tilde.not`       | ≁     | `\nsim`       |
+| `colon.eq`  | ≔     | `\coloneqq`      | `tilde.rev`       | ∽     | `\backsim`    |
+| `eq.triple` | ≡     | `\equiv`         | `tilde.triple`    | ≋     |               |
+| `eq.quad`   | ≣     |                  | `approx`          | ≈     | `\approx`     |
+| `equiv`     | ≡     | `\equiv`         | `approx.eq`       | ≊     | `\approxeq`   |
+| `equiv.not` | ≢     | `\not\equiv`     | `approx.not`      | ≉     | `\not\approx` |
+| `prop`      | ∝     | `\propto`        | `asymp`           | ≍     | `\asymp`      |
+| `eq.star`   | ≛     |                  | `asymp.not`       | ≭     |               |
 
 ### 16.7 Relations: order and comparison
 
-| Typst          | Glyph | LaTeX        | Typst            | Glyph | LaTeX          |
-| -------------- | ----- | ------------ | ---------------- | ----- | -------------- |
-| `lt`           | <     | `<`          | `gt`             | >     | `>`            |
-| `lt.eq`        | ≤     | `\leq`       | `gt.eq`          | ≥     | `\geq`         |
-| `lt.eq.slant`  | ⩽     | `\leqslant`  | `gt.eq.slant`    | ⩾     | `\geqslant`    |
-| `lt.double`    | ≪     | `\ll`        | `gt.double`      | ≫     | `\gg`          |
-| `lt.triple`    | ⋘     | `\lll`       | `gt.triple`      | ⋙     | `\ggg`         |
-| `lt.not`       | ≮     | `\nless`     | `gt.not`         | ≯     | `\ngtr`        |
-| `lt.eq.not`    | ≰     | `\nleq`      | `gt.eq.not`      | ≱     | `\ngeq`        |
-| `lt.tilde`     | ≲     | `\lesssim`   | `gt.tilde`       | ≳     | `\gtrsim`      |
-| `lt.dot`       | ⋖     | `\lessdot`   | `gt.dot`         | ⋗     | `\gtrdot`      |
-| `lt.neq`       | ⪇     | `\lneq`      | `gt.neq`         | ⪈     | `\gneq`        |
-| `lt.gt`        | ≶     | `\lessgtr`   | `gt.lt`          | ≷     | `\gtrless`     |
-| `lt.eq.gt`     | ⋚     | `\lesseqgtr` | `gt.eq.lt`       | ⋛     | `\gtreqless`   |
-| `prec`         | ≺     | `\prec`      | `succ`           | ≻     | `\succ`        |
-| `prec.eq`      | ⪯     | `\preceq`    | `succ.eq`        | ⪰     | `\succeq`      |
-| `prec.curly.eq`| ≼     | `\preccurlyeq`| `succ.curly.eq` | ≽     | `\succcurlyeq` |
-| `prec.tilde`   | ≾     | `\precsim`   | `succ.tilde`     | ≿     | `\succsim`     |
-| `prec.not`     | ⊀     | `\nprec`     | `succ.not`       | ⊁     | `\nsucc`       |
+| Typst           | Glyph | LaTeX          | Typst           | Glyph | LaTeX          |
+| --------------- | ----- | -------------- | --------------- | ----- | -------------- |
+| `lt`            | <     | `<`            | `gt`            | >     | `>`            |
+| `lt.eq`         | ≤     | `\leq`         | `gt.eq`         | ≥     | `\geq`         |
+| `lt.eq.slant`   | ⩽     | `\leqslant`    | `gt.eq.slant`   | ⩾     | `\geqslant`    |
+| `lt.double`     | ≪     | `\ll`          | `gt.double`     | ≫     | `\gg`          |
+| `lt.triple`     | ⋘     | `\lll`         | `gt.triple`     | ⋙     | `\ggg`         |
+| `lt.not`        | ≮     | `\nless`       | `gt.not`        | ≯     | `\ngtr`        |
+| `lt.eq.not`     | ≰     | `\nleq`        | `gt.eq.not`     | ≱     | `\ngeq`        |
+| `lt.tilde`      | ≲     | `\lesssim`     | `gt.tilde`      | ≳     | `\gtrsim`      |
+| `lt.dot`        | ⋖     | `\lessdot`     | `gt.dot`        | ⋗     | `\gtrdot`      |
+| `lt.neq`        | ⪇     | `\lneq`        | `gt.neq`        | ⪈     | `\gneq`        |
+| `lt.gt`         | ≶     | `\lessgtr`     | `gt.lt`         | ≷     | `\gtrless`     |
+| `lt.eq.gt`      | ⋚     | `\lesseqgtr`   | `gt.eq.lt`      | ⋛     | `\gtreqless`   |
+| `prec`          | ≺     | `\prec`        | `succ`          | ≻     | `\succ`        |
+| `prec.eq`       | ⪯     | `\preceq`      | `succ.eq`       | ⪰     | `\succeq`      |
+| `prec.curly.eq` | ≼     | `\preccurlyeq` | `succ.curly.eq` | ≽     | `\succcurlyeq` |
+| `prec.tilde`    | ≾     | `\precsim`     | `succ.tilde`    | ≿     | `\succsim`     |
+| `prec.not`      | ⊀     | `\nprec`       | `succ.not`      | ⊁     | `\nsucc`       |
 
 ### 16.8 Relations: sets, membership, subset
 
-| Typst          | Glyph | LaTeX        | Typst            | Glyph | LaTeX          |
-| -------------- | ----- | ------------ | ---------------- | ----- | -------------- |
-| `in`           | ∈     | `\in`        | `subset`         | ⊂     | `\subset`      |
-| `in.not`       | ∉     | `\notin`     | `supset`         | ⊃     | `\supset`      |
-| `in.rev`       | ∋     | `\ni`        | `subset.eq`      | ⊆     | `\subseteq`    |
-| `in.rev.not`   | ∌     | `\not\ni`    | `supset.eq`      | ⊇     | `\supseteq`    |
-| `subset.neq`   | ⊊     | `\subsetneq` | `supset.neq`     | ⊋     | `\supsetneq`   |
-| `subset.not`   | ⊄     | `\not\subset`| `supset.not`     | ⊅     | `\not\supset`  |
-| `subset.eq.not`| ⊈     | `\nsubseteq` | `supset.eq.not`  | ⊉     | `\nsupseteq`   |
-| `subset.sq`    | ⊏     | `\sqsubset`  | `supset.sq`      | ⊐     | `\sqsupset`    |
-| `subset.eq.sq` | ⊑     | `\sqsubseteq`| `supset.eq.sq`   | ⊒     | `\sqsupseteq`  |
-| `subset.double`| ⋐     | `\Subset`    | `supset.double`  | ⋑     | `\Supset`      |
+| Typst           | Glyph | LaTeX         | Typst           | Glyph | LaTeX         |
+| --------------- | ----- | ------------- | --------------- | ----- | ------------- |
+| `in`            | ∈     | `\in`         | `subset`        | ⊂     | `\subset`     |
+| `in.not`        | ∉     | `\notin`      | `supset`        | ⊃     | `\supset`     |
+| `in.rev`        | ∋     | `\ni`         | `subset.eq`     | ⊆     | `\subseteq`   |
+| `in.rev.not`    | ∌     | `\not\ni`     | `supset.eq`     | ⊇     | `\supseteq`   |
+| `subset.neq`    | ⊊     | `\subsetneq`  | `supset.neq`    | ⊋     | `\supsetneq`  |
+| `subset.not`    | ⊄     | `\not\subset` | `supset.not`    | ⊅     | `\not\supset` |
+| `subset.eq.not` | ⊈     | `\nsubseteq`  | `supset.eq.not` | ⊉     | `\nsupseteq`  |
+| `subset.sq`     | ⊏     | `\sqsubset`   | `supset.sq`     | ⊐     | `\sqsupset`   |
+| `subset.eq.sq`  | ⊑     | `\sqsubseteq` | `supset.eq.sq`  | ⊒     | `\sqsupseteq` |
+| `subset.double` | ⋐     | `\Subset`     | `supset.double` | ⋑     | `\Supset`     |
 
 ### 16.9 Relations: logic, proof, and other binary relations
 
-| Typst          | Glyph | LaTeX          | Typst          | Glyph | LaTeX        |
-| -------------- | ----- | -------------- | -------------- | ----- | ------------ |
-| `divides`      | ∣     | `\mid`         | `tack.r`       | ⊢     | `\vdash`     |
-| `divides.not`  | ∤     | `\nmid`        | `tack.l`       | ⊣     | `\dashv`     |
-| `parallel`     | ∥     | `\parallel`    | `tack.r.double`| ⊨     | `\vDash`, `\models` |
-| `parallel.not` | ∦     | `\nparallel`   | `tack.r.not`   | ⊬     | `\nvdash`    |
-| `perp`         | ⟂     | `\perp`        | `tack.r.double.not` | ⊭ | `\nvDash`    |
-| `models`       | ⊧     | `\models`      | `forces`       | ⊩     | `\Vdash`     |
-| `bot`          | ⊥     | `\bot`         | `multimap`     | ⊸     | `\multimap`  |
-| `top`          | ⊤     | `\top`         | `smile`        | ⌣     | `\smile`     |
-| `tack.t`       | ⊥     | `\bot`         | `frown`        | ⌢     | `\frown`     |
-| `tack.b`       | ⊤     | `\top`         | `image`        | ⊷     |              |
+| Typst          | Glyph | LaTeX        | Typst               | Glyph | LaTeX               |
+| -------------- | ----- | ------------ | ------------------- | ----- | ------------------- |
+| `divides`      | ∣     | `\mid`       | `tack.r`            | ⊢     | `\vdash`            |
+| `divides.not`  | ∤     | `\nmid`      | `tack.l`            | ⊣     | `\dashv`            |
+| `parallel`     | ∥     | `\parallel`  | `tack.r.double`     | ⊨     | `\vDash`, `\models` |
+| `parallel.not` | ∦     | `\nparallel` | `tack.r.not`        | ⊬     | `\nvdash`           |
+| `perp`         | ⟂     | `\perp`      | `tack.r.double.not` | ⊭     | `\nvDash`           |
+| `models`       | ⊧     | `\models`    | `forces`            | ⊩     | `\Vdash`            |
+| `bot`          | ⊥     | `\bot`       | `multimap`          | ⊸     | `\multimap`         |
+| `top`          | ⊤     | `\top`       | `smile`             | ⌣     | `\smile`            |
+| `tack.t`       | ⊥     | `\bot`       | `frown`             | ⌢     | `\frown`            |
+| `tack.b`       | ⊤     | `\top`       | `image`             | ⊷     |                     |
 
 ### 16.10 Logic and set-theory symbols (non-relational)
 
-| Typst        | Glyph | LaTeX          | Typst        | Glyph | LaTeX          |
-| ------------ | ----- | -------------- | ------------ | ----- | -------------- |
-| `forall`     | ∀     | `\forall`      | `not`        | ¬     | `\neg`         |
-| `exists`     | ∃     | `\exists`      | `complement` | ∁     | `\complement`  |
-| `exists.not` | ∄     | `\nexists`     | `therefore`  | ∴     | `\therefore`   |
-| `nothing` / `emptyset` | ∅ | `\emptyset`, `\varnothing` | `because` | ∵ | `\because`     |
-| `and`        | ∧     | `\land`        | `or`         | ∨     | `\lor`         |
-| `qed`        | ∎     | `\blacksquare` | `and.double` | ⩓     | `\Cap`-like    |
+| Typst                  | Glyph | LaTeX                      | Typst        | Glyph | LaTeX         |
+| ---------------------- | ----- | -------------------------- | ------------ | ----- | ------------- |
+| `forall`               | ∀     | `\forall`                  | `not`        | ¬     | `\neg`        |
+| `exists`               | ∃     | `\exists`                  | `complement` | ∁     | `\complement` |
+| `exists.not`           | ∄     | `\nexists`                 | `therefore`  | ∴     | `\therefore`  |
+| `nothing` / `emptyset` | ∅     | `\emptyset`, `\varnothing` | `because`    | ∵     | `\because`    |
+| `and`                  | ∧     | `\land`                    | `or`         | ∨     | `\lor`        |
+| `qed`                  | ∎     | `\blacksquare`             | `and.double` | ⩓     | `\Cap`-like   |
 
 ### 16.11 Arrows
 
 The base names are `arrow.r` →, `arrow.l` ←, `arrow.t` ↑, `arrow.b` ↓, `arrow.l.r` ↔, `arrow.t.b` ↕, plus diagonals `arrow.tr` ↗, `arrow.br` ↘, `arrow.tl` ↖, `arrow.bl` ↙. Add modifiers to any of these. The table shows the right-pointing forms; the same modifiers work for the other directions.
 
-| Typst                  | Glyph | LaTeX               |
-| ---------------------- | ----- | ------------------- |
-| `arrow.r`              | →     | `\rightarrow`, `\to`|
-| `arrow.l`              | ←     | `\leftarrow`, `\gets` |
-| `arrow.t`              | ↑     | `\uparrow`          |
-| `arrow.b`              | ↓     | `\downarrow`        |
-| `arrow.l.r`            | ↔     | `\leftrightarrow`   |
-| `arrow.t.b`            | ↕     | `\updownarrow`      |
-| `arrow.r.double`       | ⇒     | `\Rightarrow`       |
-| `arrow.l.double`       | ⇐     | `\Leftarrow`        |
-| `arrow.l.r.double`     | ⇔     | `\Leftrightarrow`   |
-| `arrow.t.double`       | ⇑     | `\Uparrow`          |
-| `arrow.b.double`       | ⇓     | `\Downarrow`        |
-| `arrow.t.b.double`     | ⇕     | `\Updownarrow`      |
-| `arrow.r.long`         | ⟶     | `\longrightarrow`   |
-| `arrow.l.long`         | ⟵     | `\longleftarrow`    |
-| `arrow.l.r.long`       | ⟷     | `\longleftrightarrow` |
-| `arrow.r.double.long`  | ⟹     | `\Longrightarrow`   |
-| `arrow.l.double.long`  | ⟸     | `\Longleftarrow`    |
-| `arrow.l.r.double.long`| ⟺     | `\Longleftrightarrow` |
-| `arrow.r.bar` / `mapsto` | ↦   | `\mapsto`           |
-| `mapsto.long`          | ⟼     | `\longmapsto`       |
-| `arrow.l.bar`          | ↤     | `\mapsfrom`         |
-| `arrow.r.hook`         | ↪     | `\hookrightarrow`   |
-| `arrow.l.hook`         | ↩     | `\hookleftarrow`    |
-| `arrow.r.tail`         | ↣     | `\rightarrowtail`   |
-| `arrow.l.tail`         | ↢     | `\leftarrowtail`    |
-| `arrow.r.twohead`      | ↠     | `\twoheadrightarrow`|
-| `arrow.l.twohead`      | ↞     | `\twoheadleftarrow` |
-| `arrow.r.not`          | ↛     | `\nrightarrow`      |
-| `arrow.l.not`          | ↚     | `\nleftarrow`       |
-| `arrow.l.r.not`        | ↮     | `\nleftrightarrow`  |
-| `arrow.r.squiggly`     | ⇝     | `\rightsquigarrow`  |
-| `arrow.r.wave`         | ↝     | `\leadsto`          |
-| `arrow.r.long.squiggly`| ⟿     |                     |
-| `arrow.r.triple`       | ⇛     | `\Rrightarrow`      |
-| `arrow.l.triple`       | ⇚     | `\Lleftarrow`       |
-| `arrow.r.dashed`       | ⇢     | `\dashrightarrow`   |
-| `arrow.l.dashed`       | ⇠     | `\dashleftarrow`    |
-| `arrow.r.loop`         | ↬     | `\looparrowright`   |
-| `arrow.l.loop`         | ↫     | `\looparrowleft`    |
-| `arrow.cw`             | ↻     | `\circlearrowright` |
-| `arrow.ccw`            | ↺     | `\circlearrowleft`  |
-| `arrow.cw.half`        | ↷     | `\curvearrowright`  |
-| `arrow.ccw.half`       | ↶     | `\curvearrowleft`   |
-| `arrow.zigzag`         | ↯     |                     |
+| Typst                    | Glyph | LaTeX                 |
+| ------------------------ | ----- | --------------------- |
+| `arrow.r`                | →     | `\rightarrow`, `\to`  |
+| `arrow.l`                | ←     | `\leftarrow`, `\gets` |
+| `arrow.t`                | ↑     | `\uparrow`            |
+| `arrow.b`                | ↓     | `\downarrow`          |
+| `arrow.l.r`              | ↔     | `\leftrightarrow`     |
+| `arrow.t.b`              | ↕     | `\updownarrow`        |
+| `arrow.r.double`         | ⇒     | `\Rightarrow`         |
+| `arrow.l.double`         | ⇐     | `\Leftarrow`          |
+| `arrow.l.r.double`       | ⇔     | `\Leftrightarrow`     |
+| `arrow.t.double`         | ⇑     | `\Uparrow`            |
+| `arrow.b.double`         | ⇓     | `\Downarrow`          |
+| `arrow.t.b.double`       | ⇕     | `\Updownarrow`        |
+| `arrow.r.long`           | ⟶     | `\longrightarrow`     |
+| `arrow.l.long`           | ⟵     | `\longleftarrow`      |
+| `arrow.l.r.long`         | ⟷     | `\longleftrightarrow` |
+| `arrow.r.double.long`    | ⟹     | `\Longrightarrow`     |
+| `arrow.l.double.long`    | ⟸     | `\Longleftarrow`      |
+| `arrow.l.r.double.long`  | ⟺     | `\Longleftrightarrow` |
+| `arrow.r.bar` / `mapsto` | ↦     | `\mapsto`             |
+| `mapsto.long`            | ⟼     | `\longmapsto`         |
+| `arrow.l.bar`            | ↤     | `\mapsfrom`           |
+| `arrow.r.hook`           | ↪     | `\hookrightarrow`     |
+| `arrow.l.hook`           | ↩     | `\hookleftarrow`      |
+| `arrow.r.tail`           | ↣     | `\rightarrowtail`     |
+| `arrow.l.tail`           | ↢     | `\leftarrowtail`      |
+| `arrow.r.twohead`        | ↠     | `\twoheadrightarrow`  |
+| `arrow.l.twohead`        | ↞     | `\twoheadleftarrow`   |
+| `arrow.r.not`            | ↛     | `\nrightarrow`        |
+| `arrow.l.not`            | ↚     | `\nleftarrow`         |
+| `arrow.l.r.not`          | ↮     | `\nleftrightarrow`    |
+| `arrow.r.squiggly`       | ⇝     | `\rightsquigarrow`    |
+| `arrow.r.wave`           | ↝     | `\leadsto`            |
+| `arrow.r.long.squiggly`  | ⟿     |                       |
+| `arrow.r.triple`         | ⇛     | `\Rrightarrow`        |
+| `arrow.l.triple`         | ⇚     | `\Lleftarrow`         |
+| `arrow.r.dashed`         | ⇢     | `\dashrightarrow`     |
+| `arrow.l.dashed`         | ⇠     | `\dashleftarrow`      |
+| `arrow.r.loop`           | ↬     | `\looparrowright`     |
+| `arrow.l.loop`           | ↫     | `\looparrowleft`      |
+| `arrow.cw`               | ↻     | `\circlearrowright`   |
+| `arrow.ccw`              | ↺     | `\circlearrowleft`    |
+| `arrow.cw.half`          | ↷     | `\curvearrowright`    |
+| `arrow.ccw.half`         | ↶     | `\curvearrowleft`     |
+| `arrow.zigzag`           | ↯     |                       |
 
 Paired arrows: `arrows.rr` ⇉, `arrows.ll` ⇇, `arrows.tt` ⇈, `arrows.bb` ⇊, `arrows.lr` ⇆ (`\leftrightarrows`), `arrows.rl` ⇄ (`\rightleftarrows`), `arrows.tb` ⇅, `arrows.bt` ⇵, `arrows.rrr` ⇶, `arrows.lll` ⬱.
 
@@ -705,105 +705,105 @@ Base `harpoon` with direction + side, e.g. `harpoon.rt` ⇀ (right, barb up) = `
 
 Auto-sizing of these is handled by the `lr` function (section 11.9) or by plain delimiters around tall content; the names below are the glyphs themselves.
 
-| Typst             | Glyph | LaTeX        | Typst             | Glyph | LaTeX        |
-| ----------------- | ----- | ------------ | ----------------- | ----- | ------------ |
-| `paren.l`         | (     | `(`          | `paren.r`         | )     | `)`          |
-| `bracket.l`       | [     | `[`          | `bracket.r`       | ]     | `]`          |
-| `brace.l`         | {     | `\{`         | `brace.r`         | }     | `\}`         |
-| `angle.l`         | ⟨     | `\langle`    | `angle.r`         | ⟩     | `\rangle`    |
-| `floor.l`         | ⌊     | `\lfloor`    | `floor.r`         | ⌋     | `\rfloor`    |
-| `ceil.l`          | ⌈     | `\lceil`     | `ceil.r`          | ⌉     | `\rceil`     |
-| `bar.v`           | \|    | `\vert`      | `bar.v.double`    | ‖     | `\Vert`      |
-| `bar.v.triple`    | ⦀     |              | `bar.h`           | ―     |              |
-| `bracket.l.double`| ⟦     | `\llbracket` | `bracket.r.double`| ⟧     | `\rrbracket` |
-| `angle.l.double`  | ⟪     |              | `angle.r.double`  | ⟫     |              |
-| `brace.l.double`  | ⦃     |              | `brace.r.double`  | ⦄     |              |
-| `paren.l.double`  | ⦅     |              | `paren.r.double`  | ⦆     |              |
-| `fence.l`         | ⧘     |              | `fence.r`         | ⧙     |              |
+| Typst              | Glyph | LaTeX        | Typst              | Glyph | LaTeX        |
+| ------------------ | ----- | ------------ | ------------------ | ----- | ------------ |
+| `paren.l`          | (     | `(`          | `paren.r`          | )     | `)`          |
+| `bracket.l`        | [     | `[`          | `bracket.r`        | ]     | `]`          |
+| `brace.l`          | {     | `\{`         | `brace.r`          | }     | `\}`         |
+| `angle.l`          | ⟨     | `\langle`    | `angle.r`          | ⟩     | `\rangle`    |
+| `floor.l`          | ⌊     | `\lfloor`    | `floor.r`          | ⌋     | `\rfloor`    |
+| `ceil.l`           | ⌈     | `\lceil`     | `ceil.r`           | ⌉     | `\rceil`     |
+| `bar.v`            | \|    | `\vert`      | `bar.v.double`     | ‖     | `\Vert`      |
+| `bar.v.triple`     | ⦀     |              | `bar.h`            | ―     |              |
+| `bracket.l.double` | ⟦     | `\llbracket` | `bracket.r.double` | ⟧     | `\rrbracket` |
+| `angle.l.double`   | ⟪     |              | `angle.r.double`   | ⟫     |              |
+| `brace.l.double`   | ⦃     |              | `brace.r.double`   | ⦄     |              |
+| `paren.l.double`   | ⦅     |              | `paren.r.double`   | ⦆     |              |
+| `fence.l`          | ⧘     |              | `fence.r`          | ⧙     |              |
 
 Stretchable over/under delimiters (used by `overbrace`/`underbrace` etc.): `brace.t` ⏞, `brace.b` ⏟, `bracket.t` ⎴, `bracket.b` ⎵, `paren.t` ⏜, `paren.b` ⏝, `shell.t` ⏠, `shell.b` ⏡.
 
 ### 16.14 Dots
 
-| Typst       | Glyph | LaTeX      | Meaning                    |
-| ----------- | ----- | ---------- | -------------------------- |
-| `dots.h`    | …     | `\ldots`   | horizontal (baseline) dots |
-| `dots.h.c`  | ⋯     | `\cdots`   | horizontal centered dots   |
-| `dots.v`    | ⋮     | `\vdots`   | vertical dots              |
-| `dots.down` | ⋱     | `\ddots`   | diagonal down dots         |
-| `dots.up`   | ⋰     | `\iddots`  | diagonal up dots           |
-| `dot.op`    | ⋅     | `\cdot`    | centered multiplication dot|
-| `dot.c`     | ·     | `\cdotp`   | middle dot                 |
-| `dot.basic` | .     | `.`        | period                     |
+| Typst       | Glyph | LaTeX     | Meaning                     |
+| ----------- | ----- | --------- | --------------------------- |
+| `dots.h`    | …     | `\ldots`  | horizontal (baseline) dots  |
+| `dots.h.c`  | ⋯     | `\cdots`  | horizontal centered dots    |
+| `dots.v`    | ⋮     | `\vdots`  | vertical dots               |
+| `dots.down` | ⋱     | `\ddots`  | diagonal down dots          |
+| `dots.up`   | ⋰     | `\iddots` | diagonal up dots            |
+| `dot.op`    | ⋅     | `\cdot`   | centered multiplication dot |
+| `dot.c`     | ·     | `\cdotp`  | middle dot                  |
+| `dot.basic` | .     | `.`       | period                      |
 
 ### 16.15 Accents
 
 These are passed as the second argument to `accent(base, ...)` (section 11.1), or many have a shorthand usable directly. The accent renders above (or for some, around) the base.
 
-| Typst          | Result over `a` | LaTeX        |
-| -------------- | --------------- | ------------ |
-| `hat`          | â               | `\hat`       |
-| `tilde` / `tilde.basic` | ã      | `\tilde`     |
-| `macron` / `bar` | ā             | `\bar`       |
-| `acute`        | á               | `\acute`     |
-| `grave`        | à               | `\grave`     |
-| `breve`        | ă               | `\breve`     |
-| `caron`        | ǎ               | `\check`     |
-| `diaer`        | ä               | `\ddot` (math) / `\"` |
-| `dot.double`   | ä (double dot)  | `\ddot`      |
-| `dot.triple`   | (triple dot)    | `\dddot`     |
-| `dot.quad`     | (quadruple dot) | `\ddddot`    |
-| `arrow` (`arrow.r`) | a⃗          | `\vec`       |
-| `circle`       | å               | `\mathring`  |
+| Typst                   | Result over `a` | LaTeX                 |
+| ----------------------- | --------------- | --------------------- |
+| `hat`                   | â               | `\hat`                |
+| `tilde` / `tilde.basic` | ã               | `\tilde`              |
+| `macron` / `bar`        | ā               | `\bar`                |
+| `acute`                 | á               | `\acute`              |
+| `grave`                 | à               | `\grave`              |
+| `breve`                 | ă               | `\breve`              |
+| `caron`                 | ǎ               | `\check`              |
+| `diaer`                 | ä               | `\ddot` (math) / `\"` |
+| `dot.double`            | ä (double dot)  | `\ddot`               |
+| `dot.triple`            | (triple dot)    | `\dddot`              |
+| `dot.quad`              | (quadruple dot) | `\ddddot`             |
+| `arrow` (`arrow.r`)     | a⃗               | `\vec`                |
+| `circle`                | å               | `\mathring`           |
 
 (For a single overdot use the base `dot` symbol, i.e. `accent(a, dot)` → ȧ, LaTeX `\dot`.)
 
 ### 16.16 Calculus and analysis
 
-| Typst        | Glyph | LaTeX        | Notes                          |
-| ------------ | ----- | ------------ | ------------------------------ |
-| `diff` / `partial` | ∂ | `\partial`   | partial derivative             |
-| `gradient` / `nabla` | ∇ | `\nabla`   | nabla / del                    |
-| `laplace`    | ∆     | `\Delta`     | Laplace operator (increment)   |
-| `infinity` / `oo` | ∞ | `\infty`     | infinity                       |
-| `dif`        | (upright d) | `\mathrm{d}` | differential d, as in `dif x`. Affects spacing. |
-| `Dif`        | (upright D) | `\mathrm{D}` | capital differential D         |
-| `planck`     | ℏ     | `\hbar`      | reduced Planck constant        |
-| `prime`      | ′     | `\prime`, `'`| prime                          |
-| `prime.double` | ″   | `''`         | double prime                   |
-| `prime.triple` | ‴   | `'''`        | triple prime                   |
+| Typst                | Glyph       | LaTeX         | Notes                                           |
+| -------------------- | ----------- | ------------- | ----------------------------------------------- |
+| `diff` / `partial`   | ∂           | `\partial`    | partial derivative                              |
+| `gradient` / `nabla` | ∇           | `\nabla`      | nabla / del                                     |
+| `laplace`            | ∆           | `\Delta`      | Laplace operator (increment)                    |
+| `infinity` / `oo`    | ∞           | `\infty`      | infinity                                        |
+| `dif`                | (upright d) | `\mathrm{d}`  | differential d, as in `dif x`. Affects spacing. |
+| `Dif`                | (upright D) | `\mathrm{D}`  | capital differential D                          |
+| `planck`             | ℏ           | `\hbar`       | reduced Planck constant                         |
+| `prime`              | ′           | `\prime`, `'` | prime                                           |
+| `prime.double`       | ″           | `''`          | double prime                                    |
+| `prime.triple`       | ‴           | `'''`         | triple prime                                    |
 
 ### 16.17 Miscellaneous math and text symbols
 
-| Typst        | Glyph | LaTeX          | Typst          | Glyph | LaTeX          |
-| ------------ | ----- | -------------- | -------------- | ----- | -------------- |
-| `degree`     | °     | `\degree`, `^\circ` | `dagger`  | †     | `\dagger`      |
-| `angle`      | ∠     | `\angle`       | `dagger.double`| ‡     | `\ddagger`     |
-| `angle.arc`  | ∡     | `\measuredangle` | `section`    | §     | `\S`           |
-| `angle.right`| ∟     | `\rightangle`  | `pilcrow`      | ¶     | `\P`           |
-| `ratio`      | ∶     | `\ratio`       | `copyright`    | ©     | `\copyright`   |
-| `colon`      | :     | `:`            | `trademark`    | ™     | `\texttrademark` |
-| `permille`   | ‰     | `\permil`      | `trademark.registered` | ® | `\textregistered` |
-| `percent`    | %     | `\%`           | `bullet`       | •     | `\bullet`      |
-| `numero`     | №     |                | `checkmark`    | ✓     | `\checkmark`   |
-| `refmark`    | ※     |                | `crossmark`    | ✗     |                |
-| `maltese`    | ✠     | `\maltese`     | `amp`          | &     | `\&`           |
+| Typst         | Glyph | LaTeX               | Typst                  | Glyph | LaTeX             |
+| ------------- | ----- | ------------------- | ---------------------- | ----- | ----------------- |
+| `degree`      | °     | `\degree`, `^\circ` | `dagger`               | †     | `\dagger`         |
+| `angle`       | ∠     | `\angle`            | `dagger.double`        | ‡     | `\ddagger`        |
+| `angle.arc`   | ∡     | `\measuredangle`    | `section`              | §     | `\S`              |
+| `angle.right` | ∟     | `\rightangle`       | `pilcrow`              | ¶     | `\P`              |
+| `ratio`       | ∶     | `\ratio`            | `copyright`            | ©     | `\copyright`      |
+| `colon`       | :     | `:`                 | `trademark`            | ™     | `\texttrademark`  |
+| `permille`    | ‰     | `\permil`           | `trademark.registered` | ®     | `\textregistered` |
+| `percent`     | %     | `\%`                | `bullet`               | •     | `\bullet`         |
+| `numero`      | №     |                     | `checkmark`            | ✓     | `\checkmark`      |
+| `refmark`     | ※     |                     | `crossmark`            | ✗     |                   |
+| `maltese`     | ✠     | `\maltese`          | `amp`                  | &     | `\&`              |
 
 ### 16.18 Geometric shapes
 
 Most shapes follow the pattern `<shape>.<fill>.<size?>` where fill is `stroked` (outline) or `filled`, e.g. `circle.stroked` ○, `circle.filled` ●.
 
-| Typst              | Glyph | LaTeX (approx) | Typst              | Glyph |
-| ------------------ | ----- | -------------- | ------------------ | ----- |
-| `circle.stroked`   | ○     | `\bigcirc`     | `circle.filled`    | ●     |
-| `square.stroked`   | □     | `\square`      | `square.filled`    | ■     |
-| `triangle.stroked.t` | △   | `\triangle`    | `triangle.filled.t`| ▲     |
-| `triangle.stroked.b` | ▽   | `\triangledown`| `triangle.filled.b`| ▼     |
-| `triangle.stroked.r` | ▷   | `\triangleright` | `triangle.filled.r` | ▶  |
-| `triangle.stroked.l` | ◁   | `\triangleleft`| `triangle.filled.l`| ◀     |
-| `diamond.stroked`  | ◇     | `\diamond`     | `diamond.filled`   | ◆     |
-| `lozenge.stroked`  | ◊     | `\lozenge`     | `lozenge.filled`   | ⧫     |
-| `star.stroked`     | ☆     | `\star`        | `star.filled`      | ★     |
+| Typst                | Glyph | LaTeX (approx)   | Typst               | Glyph |
+| -------------------- | ----- | ---------------- | ------------------- | ----- |
+| `circle.stroked`     | ○     | `\bigcirc`       | `circle.filled`     | ●     |
+| `square.stroked`     | □     | `\square`        | `square.filled`     | ■     |
+| `triangle.stroked.t` | △     | `\triangle`      | `triangle.filled.t` | ▲     |
+| `triangle.stroked.b` | ▽     | `\triangledown`  | `triangle.filled.b` | ▼     |
+| `triangle.stroked.r` | ▷     | `\triangleright` | `triangle.filled.r` | ▶     |
+| `triangle.stroked.l` | ◁     | `\triangleleft`  | `triangle.filled.l` | ◀     |
+| `diamond.stroked`    | ◇     | `\diamond`       | `diamond.filled`    | ◆     |
+| `lozenge.stroked`    | ◊     | `\lozenge`       | `lozenge.filled`    | ⧫     |
+| `star.stroked`       | ☆     | `\star`          | `star.filled`       | ★     |
 
 Each has finer size variants such as `.tiny`, `.small`, `.medium`, `.big`, and dotted/rounded variants. Related families: `rect.*`, `ellipse.*`, `parallelogram.*`, `penta.*`, `hexa.*`.
 
@@ -1050,28 +1050,183 @@ LaTeX:  a \quad b \qquad c
 Typst:  a quad b wide c
 ```
 
-## 18. Quick syntax summary
+## 18. Equation numbering, labels, and cross-references
 
-| Name                          | Example               |
-| ----------------------------- | --------------------- |
-| Inline math                   | `$x^2$`               |
-| Block-level math              | `$ x^2 $`             |
-| Bottom attachment (subscript) | `$x_1$`               |
-| Top attachment (superscript)  | `$x^2$`               |
-| Fraction                      | `$1 + (a+b)/5$`       |
-| Line break                    | `$x \ y$`             |
-| Alignment point               | `$x &= 2 \ &= 3$`     |
-| Variable access (code value)  | `$#x$`, symbol `$pi$` |
-| Field access (symbol variant) | `$arrow.r.long$`      |
-| Implied multiplication        | `$x y$` (LaTeX `xy` becomes `x y`) |
-| Symbol shorthand              | `$->$`, `$!=$`        |
-| Text/string in math           | `$a "is natural"$`    |
-| Math function call            | `$floor(x)$`          |
-| Code expression in math       | `$#rect(width: 1cm)$` |
-| Character escape              | `$x\^2$`              |
-| Comment                       | `$/* comment */$`     |
+In Typst, only **block** equations can be numbered, and equation numbering is **off by default**. Numbering is controlled by a set rule on `math.equation`. An equation is cross-referenced by attaching a label to it and pointing an `@`-reference at that label.
 
-## 19. Key rules to remember
+> **Document convention for this project: global numbering stays OFF.** Do not add a top-level `#set math.equation(numbering: ...)` rule. Every equation is unnumbered unless it is individually opted in with the scoped block shown in 18.1. In practice this means: an equation that needs a number and a label uses the `#[ ... ]` pattern; every other block equation is a plain `$ ... $`.
+
+### 18.1 Numbering a single block equation (recommended pattern)
+
+To number one specific equation and give it a label for cross-referencing, wrap it in a content block `#[ ... ]` with a scoped set rule. The `#[ ... ]` confines the set rule to just this equation, so the rest of the document stays unnumbered:
+
+```typst
+#[
+  #set math.equation(numbering: "(1)")
+  $ a^2 + b^2 = c^2 $ <eq:pythagorean_theorem>
+]
+```
+
+- `#set math.equation(numbering: "(1)")` turns on numbering, formatted as `(1)`, `(2)`, and so on. Because it sits inside the `#[ ... ]` block, the rule is scoped to only the equation within that block.
+- `<eq:pythagorean_theorem>` is the label. It goes immediately after the closing `$` of the block equation. The `eq:` prefix is a naming convention that keeps equation labels distinct from headings, figures, and other labelled elements; the name itself can be anything, as long as it is unique in the document.
+
+Cross-reference it anywhere with an `@`-reference to the same label:
+
+```typst
+By @eq:pythagorean_theorem, the squared sides are related.
+```
+
+By default this renders as "Equation 1": Typst supplies the supplement word "Equation" followed by the resolved number. The reference is also a clickable link that jumps to the equation.
+
+### 18.2 Block equations that do not need a number
+
+A block equation that will never be referenced needs no set rule and no label. Write it plainly:
+
+```typst
+$ a^2 + b^2 = c^2 $
+```
+
+It renders as a centered block with no number.
+
+### 18.3 Important: referencing requires numbering
+
+You cannot reference an equation that is not numbered. If an equation carries a label but numbering is off, Typst raises an error along the lines of "cannot reference equation without numbering." This is exactly why the single-equation pattern in 18.1 enables numbering in the same scope as the label.
+
+Rule of thumb for the conversion agent: **if an equation has a label, it must also have numbering enabled.** Since this project keeps global numbering off, that always means wrapping the labelled equation in the scoped `#[ ... ]` block from 18.1.
+
+### 18.4 Numbering several equations (the counter is shared and sequential)
+
+A natural worry with the per-equation `#[ ... ]` pattern is whether each independently scoped equation restarts at (1). It does not. Equation numbers are drawn from a single document-wide counter (`counter(math.equation)`) that advances by one **each time a numbered equation appears**. The scoped set rule only turns numbering on for that one equation; it does not create a separate counter. So several independently scoped equations come out in order:
+
+```typst
+#[
+  #set math.equation(numbering: "(1)")
+  $ a^2 + b^2 = c^2 $ <eq:pythagorean_theorem>   // (1)
+]
+
+Some text in between.
+
+#[
+  #set math.equation(numbering: "(1)")
+  $ e^(i pi) + 1 = 0 $ <eq:euler>                // (2)
+]
+```
+
+Plain block equations (`$ ... $`, no scope, no label) are **not** numbered and do **not** advance the counter, so they are simply skipped:
+
+```typst
+#[
+  #set math.equation(numbering: "(1)")
+  $ a^2 + b^2 = c^2 $ <eq:first>    // (1)
+]
+
+$ x + y = z $                        // no number, counter untouched
+
+#[
+  #set math.equation(numbering: "(1)")
+  $ E = m c^2 $ <eq:second>          // (2), not (3)
+]
+```
+
+This is exactly the interlacing you want: numbered, referenceable equations get consecutive numbers, and the unnumbered ones in between do not consume a number.
+
+Optional convenience: if repeating the `#[ ... ]` wrapper becomes tedious, a single show rule can auto-number only the equations that carry a label, while leaving everything else unnumbered (so global numbering effectively stays off for unlabelled equations):
+
+```typst
+#show math.equation: it => {
+  if it.block and it.fields().keys().contains("label") {
+    set math.equation(numbering: "(1)")
+    it
+  } else {
+    it
+  }
+}
+```
+
+With that rule in place, `$ ... $ <eq:name>` is numbered and referenceable on its own, and a plain `$ ... $` stays unnumbered, no wrapper needed. The explicit `#[ ... ]` block remains the safe, dependency-free default and is what the rest of this section assumes.
+
+### 18.5 Numbering format strings
+
+The value passed to `numbering` is a numbering pattern. A counting symbol (`1`, `a`, `A`, `i`, or `I`) is replaced by the equation's count; all other characters are literal.
+
+| Pattern | Renders as       |
+| ------- | ---------------- |
+| `"(1)"` | (1), (2), (3)    |
+| `"1"`   | 1, 2, 3          |
+| `"1."`  | 1., 2., 3.       |
+| `"[1]"` | [1], [2], [3]    |
+| `"(i)"` | (i), (ii), (iii) |
+| `"(A)"` | (A), (B), (C)    |
+
+### 18.6 Customizing the reference text and number placement
+
+Extra named arguments on the set rule adjust appearance:
+
+- `supplement: [Eq.]` changes the word placed before the number, so `@eq:...` renders as "Eq. 1" instead of "Equation 1". `supplement: none` drops the leading word entirely.
+- `number-align: bottom` (or `top`) controls where the number sits vertically next to a multi-line equation.
+
+```typst
+#set math.equation(numbering: "(1)", supplement: [Eq.])
+```
+
+For full control of the reference text (for example, to render `@eq:...` as just the parenthesized number "(1)" in the style many journals use), add a show rule on `ref` that targets equations only and leaves every other reference untouched:
+
+```typst
+#set math.equation(numbering: "(1)")
+#show ref: it => {
+  let eq = math.equation
+  let el = it.element
+  if el == none or el.func() != eq {
+    return it  // not an equation reference: leave it unchanged
+  }
+  // render just the equation's number, as a link
+  link(el.location(), counter(eq).display(at: el.location()))
+}
+```
+
+The essential idea is to detect `el.func() == math.equation` and return custom content for those references, returning `it` unchanged for everything else.
+
+### 18.7 Multi-line and aligned equations
+
+A multi-line block equation (built with `\` line breaks and `&` alignment points, see section 8) is treated as a single equation and receives one number by default. Numbering each line of an `align`-style block separately is not built in and typically requires the community `equate` package. For most paper and slide conversions, one number per displayed block is the expected behavior, matching LaTeX's `equation` and `aligned` rather than `align` (which numbers every line).
+
+### 18.8 LaTeX to Typst mapping for numbering and references
+
+| LaTeX                                                              | Typst                                                                                                                  |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `\begin{equation} ... \end{equation}` (auto-numbered)              | scoped `#[ #set math.equation(numbering: "(1)") $ ... $ <label> ]` (this project does not use a global numbering rule) |
+| `\begin{equation*} ... \end{equation*}` or `\[ ... \]` (no number) | `$ ... $` (plain block, no label)                                                                                      |
+| `\label{eq:name}` (inside the equation)                            | `<eq:name>` (immediately after the closing `$`)                                                                        |
+| `\eqref{eq:name}` → "(1)"                                          | `@eq:name` (set `supplement` or a show rule for the exact style)                                                       |
+| `\ref{eq:name}` → "1"                                              | `@eq:name` with `supplement: none`                                                                                     |
+
+For an agent converting beamer to touying: keep the label names identical to the originals (just dropping the `\label{}` wrapper), so any existing `\eqref`/`\ref` targets continue to line up with the new `@` references. The same numbering and labeling syntax works inside touying slides, because touying equations are ordinary Typst block equations.
+
+## 19. Quick syntax summary
+
+| Name                          | Example                                |
+| ----------------------------- | -------------------------------------- |
+| Inline math                   | `$x^2$`                                |
+| Block-level math              | `$ x^2 $`                              |
+| Bottom attachment (subscript) | `$x_1$`                                |
+| Top attachment (superscript)  | `$x^2$`                                |
+| Fraction                      | `$1 + (a+b)/5$`                        |
+| Line break                    | `$x \ y$`                              |
+| Alignment point               | `$x &= 2 \ &= 3$`                      |
+| Variable access (code value)  | `$#x$`, symbol `$pi$`                  |
+| Field access (symbol variant) | `$arrow.r.long$`                       |
+| Implied multiplication        | `$x y$` (LaTeX `xy` becomes `x y`)     |
+| Symbol shorthand              | `$->$`, `$!=$`                         |
+| Text/string in math           | `$a "is natural"$`                     |
+| Math function call            | `$floor(x)$`                           |
+| Code expression in math       | `$#rect(width: 1cm)$`                  |
+| Character escape              | `$x\^2$`                               |
+| Comment                       | `$/* comment */$`                      |
+| Equation label                | `$ x = y $ <eq:name>`                  |
+| Equation cross-reference      | `@eq:name`                             |
+| Enable numbering              | `#set math.equation(numbering: "(1)")` |
+
+## 20. Key rules to remember
 
 1. Whitespace just inside the dollar signs decides block vs inline. `$ x $` is a block, `$x$` is inline.
 2. A single letter is a variable shown verbatim. Multiple letters together form a name (symbol, function, or variable), not a product. Use quotes for literal multi-letter text, and spaces for multiplication. **When converting from LaTeX, this means `$xy$` must become `$x y$` (inline) or `$ x y $` (block): adjacent variables need a space between them, or Typst reads them as one name.**
@@ -1079,3 +1234,4 @@ Typst:  a quad b wide c
 4. Math function calls (no hash) keep you in math mode, support named arguments and spreading, and use `;` to separate rows in 2D argument lists.
 5. `&` sets alignment points that alternate right/left; `\` breaks lines.
 6. All math helpers are in the `math` module, prefixed with `math.` outside equations.
+7. Only block equations can be numbered, and numbering is off by default (this project keeps it off globally; never add a top-level numbering set rule). A labelled equation must have numbering enabled, or referencing it errors. Number one equation with a scoped `#[ #set math.equation(numbering: "(1)") $ ... $ <eq:name> ]`, label it with `<eq:name>`, and reference it with `@eq:name`. The shared equation counter still advances correctly across separately scoped equations, giving (1), (2), (3). Block equations that need no number are just `$ ... $`.

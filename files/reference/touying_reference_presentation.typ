@@ -1,25 +1,13 @@
 #import "@preview/touying:0.7.3": *
 #import themes.university: *
-#import "@preview/cetz:0.5.0"
-#import "@preview/fletcher:0.5.8" as fletcher: node, edge
-#import "@preview/numbly:0.1.0": numbly
+
 #import "@preview/theorion:0.6.0": *
 #import cosmos.fancy: *
-#import "@preview/physica:0.9.8": *
-#import "@preview/subpar:0.2.2"
-#import "@preview/lilaq:0.6.0" as lq
-#import "@preview/lovelace:0.3.1": *
-#import "@preview/whalogen:0.3.0": ce
-#import "@preview/unify:0.8.1": qty, unit
 #show: show-theorion
-
-// cetz and fletcher bindings for touying
-#let cetz-canvas = touying-reducer.with(reduce: cetz.canvas, cover: cetz.draw.hide.with(bounds: true))
-#let fletcher-diagram = touying-reducer.with(reduce: fletcher.diagram, cover: fletcher.hide)
 
 #show: university-theme.with(
   align: horizon,
-  aspect-ratio: "4-3",
+  aspect-ratio: "16-9",
   config-common(frozen-counters: (theorem-counter,), slide-level: 2),
   config-info(
     title: [Main Title of the Presentation],
@@ -31,32 +19,16 @@
 )
 
 // Comment out the following for heading numbering (like Beamer section numbers)
+// #import "@preview/numbly:0.1.0": numbly
 // #set heading(numbering: numbly("{1}.", default: "1.1"))
-
-// Custom math operators (equivalent to \DeclareMathOperator in LaTeX)
-#let argmin = math.op($arg thin min$, limits: true)
-#let argmax = math.op($arg thin max$, limits: true)
-
-#let titled-block(title, body) = block(
-  stroke: 0.5pt + gray,
-  radius: 4pt,
-  inset: 8pt,
-  width: 100%,
-)[
-  #text(weight: "bold")[#title]
-  #body
-]
 
 // Fonts (using New Computer Modern to avoid the Fira font warning)
 #set text(
-  // font: "New Computer Modern",  // comment out for serif font
+  // font: "New Computer Modern",  // comment out for default font
   weight: "light",
   size: 20pt,
   lang: "en",
   region: "US"
-)
-#show math.equation: set text(
-  font: "New Computer Modern Math"  // this is the default
 )
 
 #title-slide()
@@ -81,7 +53,7 @@ This is an example paragraph. This is an example paragraph. This is an example p
   [Example enumerated item 1.],
   [Example enumerated item 2.],
 )
-Citing articles: #cite(<hawking1975particle>).
+Citing articles: @hawking1975particle, @einstein1935can.
 
 == Frame with Paragraphs
 
@@ -99,7 +71,7 @@ Strikethrough text: #strike[this idea was discarded].
 
 == Footnotes
 
-Footnotes are nice. See this#footnote[This is a footnote.]. This is another sentence with another footnote#footnote[Footnotes are useful for citations or asides.].
+Footnotes are nice. See this#footnote[This is a footnote.]. This is another sentence with another footnote#footnote[Footnotes are useful for citations or asides.]. This#footnote[@einstein1935can] is footnote citation.
 
 == Quotation and Pull Quote
 
@@ -169,7 +141,7 @@ $ x^2 + y^2 = r^2 \
 
 For a single long equation that needs to break:
 $ f(x_1, x_2, dots, x_12) = a_1 x_1 + a_2 x_2 + a_3 x_3 + a_4 x_4 + a_5 x_5 + a_6 x_6 + a_7 x_7 + a_8 x_8 \
-  #h(2em) + a_9 x_9 + a_10 x_10 + a_11 x_11 + a_12 x_12 + b $
++ a_9 x_9 + a_10 x_10 + a_11 x_11 + a_12 x_12 + b $
 
 Piecewise functions:
 #[
@@ -182,6 +154,12 @@ Piecewise functions:
 Cross reference to @eq:cases.
 
 == Sets, Limits, Sums, and Products
+
+#import "@preview/physica:0.9.8": *
+
+// Custom math operators (equivalent to \DeclareMathOperator in LaTeX)
+#let argmin = math.op($arg thin min$, limits: true)
+#let argmax = math.op($arg thin max$, limits: true)
 
 Set-builder notation:
 $ A = { x in RR mid(|) x^2 < 4 }, quad abs(A) = "cardinality of " A $
@@ -199,6 +177,8 @@ $ hat(theta) = argmin_(theta in Theta) cal(L)(theta), quad
   hat(y) = argmax_(y in cal(Y)) P(y mid(|) x) $
 
 == Vectors and Matrices
+
+#import "@preview/physica:0.9.8": *
 
 $ vb(alpha) = mat(delim: "[", alpha_1; alpha_2; alpha_3), quad
   vb(alpha)^top = mat(delim: "[", alpha_1, alpha_2, alpha_3) $
@@ -221,6 +201,8 @@ $ vb(Sigma) = mat(delim: "[",
 
 == Derivatives and Integrals
 
+#import "@preview/physica:0.9.8": *
+
 $ f(x) = x^2 + 2x ==> dv(f(x), x) = 2x + 2 ==> dv(f(x), x, 2) = 2 ==> dv(f(x), x, 3) = 0 $
 
 $ dv(, x) sin(x) = cos(x) $
@@ -238,6 +220,8 @@ $ f(x, y) = x^2 + x y + 3 ==> pdv(f(x\, y), x) = 2x + y ==> pdv(f(x\, y), x, y) 
 
 == Probability and Statistics
 
+#import "@preview/physica:0.9.8": *
+
 $X$ is a discrete random variable. If discrete, PMF is denoted by $p_X (x)$. If continuous, PDF is denoted by $f_X (x)$. CDF is always denoted by $F_X (x)$.
 
 PMF of Binomial Distribution:
@@ -254,6 +238,8 @@ CDF of a Normal random variable $X$, i.e., $X tilde cal(N)(mu, sigma^2)$:
 $ Phi(x) = 1/(sigma sqrt(2 pi)) integral_(-infinity)^x exp(-((t-mu)^2)/(2 sigma^2)) dd(t), quad x in RR $
 
 == Chemical Equations
+
+#import "@preview/whalogen:0.3.0": ce
 
 This is the formula for water: #ce("H2O")
 
@@ -278,7 +264,7 @@ Oxidation number support: #ce("|Mn,+II|")
 == Example Figure
 
 #figure(
-  image("<path_to_image_with_image_extension>", width: 50%),
+  image("graphics/example_image.png", width: 50%),
   caption: [Example Figure],
 ) <fig:example_figure_a>
 
@@ -286,10 +272,12 @@ Cross reference to @fig:example_figure_a.
 
 == Subfigures
 
+#import "@preview/subpar:0.2.2"
+
 #subpar.grid(
-  figure(image("<path_to_image_with_image_extension>", width: 100%), caption: [Subcaption A]), <fig:sub_a>,
-  figure(image("<path_to_image_with_image_extension>", width: 100%), caption: [Subcaption B]), <fig:sub_b>,
-  figure(image("<path_to_image_with_image_extension>", width: 100%), caption: [Subcaption C]), <fig:sub_c>,
+  figure(image("graphics/example_image.png", width: 100%), caption: [Subcaption A]), <fig:sub_a>,
+  figure(image("graphics/example_image.png", width: 100%), caption: [Subcaption B]), <fig:sub_b>,
+  figure(image("graphics/example_image.png", width: 100%), caption: [Subcaption C]), <fig:sub_c>,
   columns: (1fr, 1fr, 1fr),
   caption: [A figure with three subfigures.],
   label: <fig:subfigures_example>,
@@ -298,6 +286,9 @@ Cross reference to @fig:example_figure_a.
 Cross reference to @fig:sub_a, @fig:sub_b, @fig:sub_c.
 
 == Flowchart Diagram
+
+#import "@preview/fletcher:0.5.8" as fletcher: node, edge
+#let fletcher-diagram = touying-reducer.with(reduce: fletcher.diagram, cover: fletcher.hide)
 
 #figure(
   fletcher-diagram(
@@ -317,6 +308,11 @@ Cross reference to @fig:sub_a, @fig:sub_b, @fig:sub_c.
 ) <fig:flowchart>
 
 == Flowchart Diagrams
+
+#import "@preview/subpar:0.2.2"
+
+#import "@preview/fletcher:0.5.8" as fletcher: node, edge
+#let fletcher-diagram = touying-reducer.with(reduce: fletcher.diagram, cover: fletcher.hide)
 
 #subpar.grid(
   figure(
@@ -358,6 +354,9 @@ Cross reference to @fig:sub_a, @fig:sub_b, @fig:sub_c.
 
 == Fletcher Diagram
 
+#import "@preview/fletcher:0.5.8" as fletcher: node, edge
+#let fletcher-diagram = touying-reducer.with(reduce: fletcher.diagram, cover: fletcher.hide)
+
 #figure(
   fletcher-diagram($
     G edge(f, ->) edge("d", pi, ->>) & im(f) \
@@ -367,6 +366,11 @@ Cross reference to @fig:sub_a, @fig:sub_b, @fig:sub_c.
 ) <fig:fletcher-diagram>
 
 == Fletcher Diagrams
+
+#import "@preview/subpar:0.2.2"
+
+#import "@preview/fletcher:0.5.8" as fletcher: node, edge
+#let fletcher-diagram = touying-reducer.with(reduce: fletcher.diagram, cover: fletcher.hide)
 
 #subpar.grid(
   figure(
@@ -389,6 +393,8 @@ Cross reference to @fig:sub_a, @fig:sub_b, @fig:sub_c.
 )
 
 == Plot
+
+#import "@preview/lilaq:0.6.0" as lq
 
 #figure(
   lq.diagram(
@@ -419,6 +425,10 @@ Cross reference to @fig:sub_a, @fig:sub_b, @fig:sub_c.
 ) <fig:plot_example>
 
 == Plots
+
+#import "@preview/subpar:0.2.2"
+
+#import "@preview/lilaq:0.6.0" as lq
 
 #subpar.grid(
   figure(
@@ -529,6 +539,8 @@ Cross reference to @tab:example_table.
 
 == Table with Units
 
+#import "@preview/unify:0.8.1": qty, unit
+
 #figure(
   table(
     columns: 3,
@@ -580,6 +592,8 @@ Cross reference to @tab:example_table.
 
 == Binary Search
 
+#import "@preview/lovelace:0.3.1": *
+
 #text(size: 13pt)[
 #figure(
   kind: "algorithm",
@@ -626,6 +640,7 @@ def binary_search(a, x):
 
     return -1
 ```
+
 = Columns
 
 == Two Columns
@@ -648,6 +663,16 @@ def binary_search(a, x):
 
 == Two Columns (Blocks)
 
+#let titled-block(title, body) = block(
+  stroke: 0.5pt + gray,
+  radius: 4pt,
+  inset: 8pt,
+  width: 100%,
+)[
+  #text(weight: "bold")[#title]
+  #body
+]
+
 #slide(composer: (1fr, 1fr))[
   #titled-block("Left Column Name")[
     #list(
@@ -667,6 +692,16 @@ def binary_search(a, x):
 ]
 
 == Three Columns
+
+#let titled-block(title, body) = block(
+  stroke: 0.5pt + gray,
+  radius: 4pt,
+  inset: 8pt,
+  width: 100%,
+)[
+  #text(weight: "bold")[#title]
+  #body
+]
 
 #slide(composer: (1fr, 1fr, 1fr))[
   #titled-block("Column 1 Name")[
@@ -701,7 +736,7 @@ def binary_search(a, x):
 
 #slide(composer: (1fr, 1fr))[
   #align(center)[
-    #image("<path_to_image_with_image_extension>", width: 80%)
+    #image("graphics/example_image.png", width: 80%)
   ]
 ][
   #list(
@@ -713,6 +748,9 @@ def binary_search(a, x):
 ]
 
 == Flowchart in One Column and Text in the Other Column
+
+#import "@preview/fletcher:0.5.8" as fletcher: node, edge
+#let fletcher-diagram = touying-reducer.with(reduce: fletcher.diagram, cover: fletcher.hide)
 
 #slide(composer: (1fr, 1fr))[
   #align(center)[
@@ -743,6 +781,8 @@ def binary_search(a, x):
 ]
 
 == Plot in One Column and Text in the Other Column
+
+#import "@preview/lilaq:0.6.0" as lq
 
 #slide(composer: (1fr, 1fr))[
   #align(center)[
@@ -793,6 +833,16 @@ def binary_search(a, x):
 ]
 
 == Key Takeaways
+
+#let titled-block(title, body) = block(
+  stroke: 0.5pt + gray,
+  radius: 4pt,
+  inset: 8pt,
+  width: 100%,
+)[
+  #text(weight: "bold")[#title]
+  #body
+]
 
 #titled-block("Summary")[
   #list(
