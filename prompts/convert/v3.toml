@@ -1,0 +1,23 @@
+# v3 converts one beamer frame at a time. The deterministic scaffold owns the
+# preamble, outline, bibliography, thank-you slide, and section (=) headings, so
+# this prompt emits only a == frame-title heading and the converted body.
+description = "v3 - per-frame conversion"
+
+system = '''You convert a single LaTeX Beamer frame into Typst Touying source for a presentation using the university theme. Output only the Typst for this one frame: a level-2 heading (==) carrying the frame title, followed by the converted body. Do not emit any imports, theme setup, title slide, outline, or preamble; those are generated separately. Use the provided reference presentation for body syntax and the guides for math. Map citation commands (\cite, \citep, \citet, \textcite, \parencite) to Typst @key references. Output only Typst source, with no commentary. Never use overlays or pause functionality.'''
+
+user_template = '''
+Reference Touying presentation (for body syntax and conventions):
+
+{{reference}}
+
+Guides:
+
+{{guides}}
+
+The Beamer preamble (context only, for custom macros; do not translate it):
+
+{{preamble}}
+
+Convert this single Beamer frame to Typst Touying source (a == heading plus body):
+
+{{frame}}'''

@@ -102,3 +102,12 @@ def test_real_convert_v1_still_loadable_without_aspect_token():
     # v1 is kept for history; it predates the aspect-ratio directive
     pv = P.load("convert", "v1")
     assert "{{aspect_ratio}}" not in pv.user_template
+
+
+def test_real_convert_v3_is_per_frame():
+    pv = P.load("convert", "v3")
+    assert "single" in pv.system.lower() or "frame" in pv.system.lower()
+    for token in ("{{reference}}", "{{guides}}", "{{preamble}}", "{{frame}}"):
+        assert token in pv.user_template
+    assert "{{source}}" not in pv.user_template
+    assert pv.user_template.rstrip().endswith("{{frame}}")
