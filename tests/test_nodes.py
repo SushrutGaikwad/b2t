@@ -203,3 +203,21 @@ def test_preview_node_assembles_without_bibliography(tmp_path):
     assert "== Slide" in text
     assert "#title-slide()" in text
     assert "#bibliography" not in text  # previews never show the bibliography
+
+
+def test_review_node_auto_approves_when_hitl_disabled():
+    from b2t.nodes.review import review_node
+    from b2t.state import FrameUnit
+
+    state = _state(
+        hitl_enabled=False,
+        frames=[FrameUnit(raw=""), FrameUnit(raw="")],
+        frame_index=0,
+        converted_frames=[],
+        candidate="== X\n\nbody",
+    )
+    update = review_node(state)
+    assert update["converted_frames"] == ["== X\n\nbody"]
+    assert update["frame_index"] == 1
+    assert update["candidate"] is None
+    assert update["feedback"] is None
