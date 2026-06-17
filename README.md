@@ -19,6 +19,7 @@ tagging for blind and visually impaired readers as the driving goal.
 - [Run (v0)](#run-v0)
 - [Run the testing UI](#run-the-testing-ui)
 - [Logs](#logs)
+- [License](#license)
 
 ## Architecture (v0)
 
@@ -198,6 +199,11 @@ restarts is a later, SaaS-stage concern).
 The console shows INFO lines; the full DEBUG trail is written to
 `logs/b2t.log` (rotated at 10 MB, kept 10 days, gitignored). Tracebacks omit
 variable values so API keys never land in the logs.
+
+## License
+
+Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for the
+full text.
 
 ---
 
