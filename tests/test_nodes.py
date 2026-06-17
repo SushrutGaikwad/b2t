@@ -197,3 +197,42 @@ def test_assemble_node_includes_bibliography_when_bib_present(tmp_path):
     )
     update = assemble_node(state)
     assert '#bibliography("references.bib"' in update["typst_source"]
+
+
+def test_convert_frame_appends_and_advances():
+    from b2t.llm import FakeClient
+    from b2t.nodes.convert_frame import convert_frame
+    from b2t.state import FrameUnit, NodeChoice
+
+    state = _state(
+        preamble="PRE",
+        frames=[FrameUnit(raw="f0"), FrameUnit(raw="f1")],
+        frame_index=0,
+        llm_choices={"convert": NodeChoice(prompt_version="v3")},
+    )
+    update = convert_frame(state, client=FakeClient("== Title\n\nbody\n"))
+    assert update["frame_index"] == 1
+    assert update["converted_frames"] == ["== Title\n\nbody\n"]
+    assert update["llm_runs"]["convert"].prompt_version == "v3"
+
+
+def test_convert_frame_passes_preamble_and_frame_into_prompt():
+    from b2t.nodes.convert_frame import convert_frame
+    from b2t.state import FrameUnit, NodeChoice
+
+    captured = {}
+
+    class Recorder:
+        def complete(self, system, user, model):
+            captured["user"] = user
+            return "== ok\n"
+
+    state = _state(
+        preamble="MYPREAMBLE",
+        frames=[FrameUnit(raw="MYFRAME")],
+        frame_index=0,
+        llm_choices={"convert": NodeChoice(prompt_version="v3")},
+    )
+    convert_frame(state, client=Recorder())
+    assert "MYPREAMBLE" in captured["user"]
+    assert "MYFRAME" in captured["user"]
