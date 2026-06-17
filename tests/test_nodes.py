@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from b2t.nodes.clean_build import clean_build
 from b2t.nodes.copy_input import copy_input
 from b2t.nodes.detect_main import detect_main
@@ -136,3 +138,30 @@ def test_convert_node_records_rendered_prompt():
     update = convert_node(_state(stripped_tex="MYSOURCE"), client=FakeClient("= ok\n"))
     assert "MYSOURCE" in update["llm_rendered"]["convert"].user
     assert update["llm_rendered"]["convert"].system
+
+
+def test_split_deck_node(tmp_path):
+    from b2t.nodes.split_deck import split_deck
+
+    stripped = (
+        "\\documentclass{beamer}\n\\title{T}\n\\date{June 2026}\n"
+        "\\begin{document}\n"
+        "\\begin{frame}\\titlepage\\end{frame}\n"
+        "\\section{Intro}\n"
+        "\\begin{frame}{Motivation}a\\end{frame}\n"
+        "\\end{document}\n"
+    )
+    update = split_deck(_state(stripped_tex=stripped, work_dir=tmp_path))
+    assert update["meta"].title == "T"
+    assert update["has_toc"] is False
+    assert update["bib_file"] is None
+    assert [f.section for f in update["frames"]] == ["Intro"]
+    assert r"\title" in update["preamble"]
+
+
+def test_split_deck_node_raises_without_frames(tmp_path):
+    from b2t.nodes.split_deck import split_deck
+
+    stripped = "\\documentclass{beamer}\n\\begin{document}\n\\end{document}\n"
+    with pytest.raises(ValueError):
+        split_deck(_state(stripped_tex=stripped, work_dir=tmp_path))
