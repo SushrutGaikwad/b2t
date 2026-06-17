@@ -44,3 +44,51 @@ def parse_meta(preamble: str) -> DeckMeta:
         institute=_field("institute", preamble),
         date_raw=_field("date", preamble),
     )
+
+
+_TOKEN_RE = re.compile(
+    r"\\section\*?\{(?P<section>[^}]*)\}"
+    r"|\\begin\{frame\}(?P<frame>.*?)\\end\{frame\}",
+    re.DOTALL,
+)
+
+# Frames whose body holds one of these are rendered by the scaffold, not the LLM.
+_SCAFFOLD_FRAME_MARKERS = (r"\titlepage", r"\tableofcontents", r"\printbibliography")
+
+
+def split_frames(body: str) -> tuple[list[FrameUnit], bool]:
+    """Split the document body into section-tagged frames.
+
+    Walks the body in order, tracking the current \\section. The title-slide,
+    table-of-contents, and bibliography frames are excluded because the scaffold
+    renders them; the table-of-contents frame sets has_toc.
+
+    Args:
+        body: The text after \\begin{document}.
+
+    Returns:
+        The ordered convertible frames, and whether a \\tableofcontents frame
+        was present.
+
+    Raises:
+        ValueError: If a \\begin{frame} has no matching \\end{frame}.
+    """
+    frames: list[FrameUnit] = []
+    has_toc = False
+    current_section: str | None = None
+    matched = 0
+    for match in _TOKEN_RE.finditer(body):
+        if match.group("section") is not None:
+            current_section = match.group("section").strip()
+            continue
+        matched += 1
+        inner = match.group("frame")
+        if r"\tableofcontents" in inner:
+            has_toc = True
+            continue
+        if any(marker in inner for marker in _SCAFFOLD_FRAME_MARKERS):
+            continue
+        frames.append(FrameUnit(raw=match.group(0), section=current_section))
+    if matched != body.count(r"\begin{frame}"):
+        raise ValueError(r"unmatched \begin{frame} in document body")
+    return frames, has_toc
