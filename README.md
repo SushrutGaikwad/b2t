@@ -34,8 +34,11 @@ flowchart TD
     clean_build --> detect_main
     detect_main --> flatten
     flatten --> strip_overlays
-    strip_overlays --> convert
-    convert --> write_output
+    strip_overlays --> split_deck
+    split_deck --> convert
+    convert -->|more frames| convert
+    convert -->|done| assemble
+    assemble --> write_output
     write_output --> compile
     compile --> stop([END])
 
@@ -43,8 +46,8 @@ flowchart TD
     class convert llm;
 ```
 
-The shaded `convert` node is the only LLM step; every other node is
-deterministic.
+The shaded `convert` node is the only LLM step; it runs once per Beamer frame in
+a cycle. Every other node is deterministic.
 
 ### Nodes
 
@@ -62,16 +65,25 @@ deterministic.
 5. `strip_overlays` (deterministic): Removes Beamer overlay constructs
    (`\pause`, `\only`, `\uncover`, `\onslide`, and `<...>` specs) while keeping
    the wrapped content. The output never uses overlays.
-6. `convert` (LLM): The single model call. Translates the flattened,
-   overlay-free Beamer source into Typst Touying source, using the reference
-   presentation, the Typst math guide, and the detected aspect ratio as context.
-   A markdown code fence wrapping the whole answer is stripped deterministically.
-7. `write_output` (deterministic): Normalizes `image()` references to the
+6. `split_deck` (deterministic): Splits the stripped source into the preamble,
+   the title metadata (`\title`, `\author`, `\subtitle`, `\institute`,
+   `\date`), an ordered list of frames each tagged with its `\section`, a
+   table-of-contents flag, and the detected `.bib`. The title-slide, outline,
+   and bibliography frames are excluded because the scaffold renders them.
+7. `convert` (LLM): The only model call, run once per frame in a graph cycle.
+   Each invocation translates one Beamer frame into a `==` frame-title heading
+   plus body, using the preamble, the reference presentation, and the Typst math
+   guide as context. A wrapping markdown code fence is stripped deterministically.
+8. `assemble` (deterministic): Builds the final deck: the header (imports,
+   theme, `config-info` from the metadata, title slide), an optional outline,
+   the converted frame bodies interleaved with `= Section` headings, and an
+   optional bibliography plus thank-you slide.
+9. `write_output` (deterministic): Normalizes `image()` references to the
    copied filenames (with extension), writes `main.typ` to the output
-   directory, and copies the referenced images alongside it.
-8. `compile` (deterministic): Runs `typst compile` on `main.typ` and records
-   the result (PDF path on success, error text on failure). v0 records the
-   error but does not yet retry.
+   directory, and copies the referenced images and the `.bib` alongside it.
+10. `compile` (deterministic): Runs `typst compile` on `main.typ` and records
+    the result (PDF path on success, error text on failure); failures are
+    recorded, not yet retried.
 
 ## Models
 

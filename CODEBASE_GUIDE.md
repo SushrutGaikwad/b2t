@@ -126,11 +126,11 @@ compiles it to a PDF. There are **two ways to run it**:
    `b2t.app.convert_deck(input_dir, output_dir)`.
 2. **As a web app** - start a server (`b2t.api.app:app`) and use the browser UI.
 
-Both paths build and run the **same pipeline**: a fixed, straight-line chain of
-**eight steps** ("nodes"). **Seven nodes are plain Python.** **One node calls an
-AI model** to do the actual Beamer-to-Typst translation. A single object,
-`PipelineState`, is passed through all eight nodes; each node reads some of its
-fields and writes others.
+Both paths build and run the **same pipeline**: a chain of **ten steps**
+("nodes"). **Nine nodes are plain Python.** **One node calls an AI model** to do
+the actual Beamer-to-Typst translation, once per Beamer frame in a loop. A single
+object, `PipelineState`, is passed through all ten nodes; each node reads some of
+its fields and writes others.
 
 The one AI node does not talk to a model directly. It goes through a small, swappable
 **client** (`llm.py`) and pulls its wording from a **prompt registry** (`prompts/`)
@@ -193,7 +193,8 @@ b2t/
     nodes/                one file per pipeline step (thin wrappers)
       _llm.py             run_prompt(): the shared helper every AI node uses
       copy_input.py  clean_build.py  detect_main.py  flatten.py
-      strip_overlays.py  convert.py  write_output.py  compile.py
+      strip_overlays.py  split_deck.py  convert_frame.py  assemble.py
+      write_output.py  compile.py
 
     latex/                the deterministic LaTeX logic the nodes call
       aspect.py  cleanup.py  detect.py  includes.py  flatten.py  overlays.py
@@ -206,9 +207,10 @@ b2t/
       static/             index.html, app.js, style.css (the browser UI)
 
   prompts/                the prompt registry (versioned AI wording, see section 7)
-    defaults.json         { "convert": "v2" }: the default version per node
-    convert/v1.toml       the original convert prompt (kept for history)
-    convert/v2.toml       the default: adds the aspect-ratio directive
+    defaults.json         { "convert": "v3" }: the default version per node
+    convert/v1.toml       the original whole-deck prompt (kept for history)
+    convert/v2.toml       whole-deck, adds the aspect-ratio directive (history)
+    convert/v3.toml       the default: per-frame conversion
 
   files/                  data the converter reads (not code)
     reference/touying_reference_presentation.typ   the canonical example deck
@@ -507,10 +509,11 @@ file:
 
 ```txt
 prompts/
-  defaults.json          { "convert": "v2" }   the default version per node
+  defaults.json          { "convert": "v3" }   the default version per node
   convert/
-    v1.toml              the original prompt (kept for history)
-    v2.toml              the default: adds the aspect-ratio directive
+    v1.toml              the original whole-deck prompt (kept for history)
+    v2.toml              whole-deck + aspect-ratio directive (kept for history)
+    v3.toml              the default: per-frame conversion
 ```
 
 Each version file is **TOML** (a simple config format read with Python's built-in
@@ -598,24 +601,24 @@ general so future AI nodes need no new plumbing.
 
 ### `build_graph(client: LLMClient)`
 
-This function wires the eight node functions into a LangGraph `StateGraph` (a graph
+This function wires the ten node functions into a LangGraph `StateGraph` (a graph
 whose shared data type is `PipelineState`), then compiles and returns it. The body
 does three things:
 
-1. **Registers nodes** with `graph.add_node(name, fn)`. Seven nodes are added
-   directly. The `convert` node is special: `convert_node` needs the client as a
-   second argument, so it is bound with `partial(convert_node, client=client)`.
-   `functools.partial` pre-fills the `client` argument, producing a function
-   LangGraph can call with just the state. (LangGraph always calls a node with one
-   argument: the current state.)
-2. **Adds edges** with `graph.add_edge(...)` to form one straight line.
+1. **Registers nodes** with `graph.add_node(name, fn)`. Nine nodes are added
+   directly. The AI node is special: `convert_frame` needs the client as a second
+   argument, so it is registered under the name `convert` and bound with
+   `partial(convert_frame, client=client)`. `functools.partial` pre-fills the
+   `client` argument, producing a function LangGraph can call with just the state.
+2. **Adds edges** with `graph.add_edge(...)`, plus one **conditional edge** on
+   `convert`: `_more_frames` loops back to `convert` while frames remain, then
+   routes to `assemble`.
 3. **Returns `graph.compile()`** - a runnable graph object exposing `.invoke()`
    (run once, return the final state) and `.stream()` (run and emit events as it
    goes; the web layer uses this for live progress).
 
-The graph is intentionally **linear**: no branches, no loops, no conditional edges.
-That makes the control flow trivial to follow, and it is why the node order is
-fixed.
+The graph is a straight line except for the `convert` self-loop, which runs the AI
+node once per Beamer frame before `assemble` stitches the deck together.
 
 ```mermaid
 flowchart TD
@@ -624,8 +627,11 @@ flowchart TD
     clean_build --> detect_main
     detect_main --> flatten
     flatten --> strip_overlays
-    strip_overlays --> convert
-    convert --> write_output
+    strip_overlays --> split_deck
+    split_deck --> convert
+    convert -->|more frames| convert
+    convert -->|done| assemble
+    assemble --> write_output
     write_output --> compile
     compile --> END([END])
 
@@ -633,7 +639,8 @@ flowchart TD
     class convert llm;
 ```
 
-The shaded `convert` is the only AI node. Every other node is deterministic.
+The shaded `convert` is the only AI node, run once per frame. Every other node is
+deterministic.
 
 > **What does "compile the graph" mean here?** Nothing to do with `typst compile`.
 > LangGraph "compiles" the graph definition into an optimized, runnable object,
@@ -660,9 +667,11 @@ what.
 | 3   | `detect_main`    | `work_dir`                                  | `main_tex`, `aspect_ratio`                     | `latex.detect.find_main_tex`, `latex.aspect.aspect_ratio` |
 | 4   | `flatten`        | `main_tex`                                  | `included_tex`, `image_files`, `flattened_tex` | `latex.includes.parse_includes`, `latex.flatten.flatten` |
 | 5   | `strip_overlays` | `flattened_tex`                             | `stripped_tex`                                 | `latex.overlays.strip_overlays`                          |
-| 6   | `convert`        | `stripped_tex`, `aspect_ratio`, `llm_choices` | `typst_source`, `llm_runs`, `llm_rendered`   | `nodes._llm.run_prompt`, `typst_output.strip_code_fence` |
-| 7   | `write_output`   | `typst_source`, `image_files`, `output_dir` | `typst_path`, `typst_source`                   | `typst_images.fix_image_paths`                           |
-| 8   | `compile`        | `typst_path`                                | `compiled`, `pdf_path`, `compile_error`        | `typst_runner.compile_typst`                             |
+| 6   | `split_deck`     | `stripped_tex`, `work_dir`                  | `preamble`, `meta`, `frames`, `has_toc`, `bib_file` | `latex.split.*`, `latex.includes.detect_bib_file`   |
+| 7   | `convert`        | `preamble`, `frames`, `frame_index`, `llm_choices` | `converted_frames`, `frame_index`, `llm_runs`, `llm_rendered` | `nodes._llm.run_prompt`, `typst_output.strip_code_fence` |
+| 8   | `assemble`       | `meta`, `aspect_ratio`, `has_toc`, `frames`, `converted_frames`, `bib_file` | `typst_source`             | `typst_scaffold.assemble`                                |
+| 9   | `write_output`   | `typst_source`, `image_files`, `bib_file`, `output_dir` | `typst_path`, `typst_source`       | `typst_images.fix_image_paths`                           |
+| 10  | `compile`        | `typst_path`                                | `compiled`, `pdf_path`, `compile_error`        | `typst_runner.compile_typst`                             |
 
 Now each node in detail, in execution order.
 
@@ -687,7 +696,7 @@ Returns `{"main_tex": ..., "aspect_ratio": ...}`. `find_main_tex` (section 10.2)
 raises if it cannot find **exactly one** Beamer main file, so a malformed deck
 fails loudly here rather than guessing. It then reads that file's
 `\documentclass` aspectratio via `latex.aspect.aspect_ratio` (section 10.6) and
-records the matching Touying aspect ratio for the convert node to honor.
+records the matching Touying aspect ratio for the assemble node to honor.
 
 ### 9.4 `flatten.py` - `flatten_node(state)`
 
@@ -708,23 +717,49 @@ must never use them, so they are removed here, **before the AI ever sees the
 content** (section 10.5). The wrapped content is kept; only the animation commands
 are dropped.
 
-### 9.6 `convert.py` - `convert_node(state, client)`
+### 9.6 `split_deck.py` - `split_deck(state)`
 
-The AI node, and the only one with a second parameter (`client`), which is why
-`build_graph` binds it with `partial`. It:
+Splits `stripped_tex` into the pieces the rest of the pipeline needs, via the
+`latex.split` and `latex.includes` helpers:
+
+1. `split_preamble` divides the source at `\begin{document}` into preamble and body.
+2. `parse_meta` reads the title-block commands (`\title`, `\subtitle`, `\author`,
+   `\institute`, `\date`) into a `DeckMeta`.
+3. `split_frames` walks the body, tagging each `\begin{frame}` with the current
+   `\section`. The title-slide, table-of-contents, and `\printbibliography` frames
+   are excluded (the scaffold renders them), and a `\tableofcontents` frame sets
+   `has_toc`.
+4. `detect_bib_file` resolves any `\addbibresource`/`\bibliography` to the `.bib`.
+
+Returns `preamble`, `meta`, `frames`, `has_toc`, and `bib_file`. Raises if the deck
+has no convertible frames.
+
+### 9.7 `convert_frame.py` - `convert_frame(state, client)` (registered as `convert`)
+
+The AI node, run once per frame in a graph cycle, and the only one with a second
+parameter (`client`), which is why `build_graph` binds it with `partial`. For
+`frames[frame_index]` it:
 
 1. Reads the reference deck and the math guide from disk (paths from `config.py`).
-2. Calls `run_prompt(state, "convert", client, {reference, guides, source,
-   aspect_ratio})` (section 7.3), which resolves the model and prompt version,
-   renders the prompt, calls the client, and returns the output plus the
-   provenance and rendered prompt.
-3. Passes the model output through `strip_code_fence` (section 11.3) to remove a
-   markdown ```` ```typst ... ``` ```` wrapper if the model added one.
-4. Returns `{"typst_source": ..., "llm_runs": {..., "convert": run},
-   "llm_rendered": {..., "convert": rendered}}` - merging its provenance and
-   rendered prompt into the running state.
+2. Calls `run_prompt(state, "convert", client, {reference, guides, preamble,
+   frame})` (section 7.3), which resolves the model and prompt version, renders the
+   prompt, calls the client, and returns the output plus provenance and rendered
+   prompt.
+3. Passes the model output through `strip_code_fence` (section 11.3).
+4. Returns the grown `converted_frames`, the next `frame_index`, and the merged
+   `llm_runs`/`llm_rendered` under the `convert` key. A conditional edge loops back
+   to this node until every frame is converted.
 
-### 9.7 `write_output.py` - `write_output(state)`
+### 9.8 `assemble.py` - `assemble_node(state)`
+
+Builds the final Typst deck deterministically from the scaffold and the converted
+frames (via `typst_scaffold.assemble`): the header (imports, theme, `config-info`
+filled from `meta`, the title slide), an optional outline when `has_toc`, the
+converted frame bodies interleaved with `= Section` headings, and an optional
+bibliography section plus thank-you slide when a `.bib` was found. Returns
+`{"typst_source": ...}`.
+
+### 9.9 `write_output.py` - `write_output(state)`
 
 Materializes the result on disk:
 
@@ -733,12 +768,12 @@ Materializes the result on disk:
    `image("...")` calls in the generated Typst so they point at the real copied
    filenames (section 11.2).
 3. Writes the corrected Typst to `output_dir/main.typ`.
-4. Copies each referenced image flat into `output_dir` (so all images sit next to
-   `main.typ`).
+4. Copies each referenced image flat into `output_dir`, plus the `.bib` when one
+   was detected (so `#bibliography` resolves).
 5. Returns `{"typst_path": ..., "typst_source": ...}` - it returns the corrected
    source so the saved state matches what is on disk.
 
-### 9.8 `compile.py` - `compile_node(state)`
+### 9.10 `compile.py` - `compile_node(state)`
 
 Calls `compile_typst(state.typst_path)` and maps the result into
 `{"compiled": result.ok, "pdf_path": result.pdf_path, "compile_error":
@@ -937,7 +972,7 @@ loop. It lives in four Python files plus a static frontend.
 
 This module owns the job lifecycle.
 
-- `PIPELINE_NODES` - a tuple naming the eight nodes in order, used as a reference for
+- `PIPELINE_NODES` - a tuple naming the ten nodes in order, used as a reference for
   progress display.
 - `EXECUTOR = ThreadPoolExecutor(max_workers=2)` - a module-level thread pool. Job
   conversions run here so HTTP requests can return immediately. At most two jobs run
@@ -1468,8 +1503,8 @@ If you want to read the code in the order it executes, follow this path:
 3. `graph.py` to see the node order.
 4. `nodes/` in pipeline order, jumping into each `latex/` helper as you reach it.
 5. The LLM seam, in this order: `llm.py` (the client), `prompts.py` plus
-   `prompts/convert/v1.toml` (the wording), then `nodes/_llm.py` (the glue) and
-   `nodes/convert.py` (the one AI node that uses them).
+   `prompts/convert/v3.toml` (the wording), then `nodes/_llm.py` (the glue) and
+   `nodes/convert_frame.py` (the one AI node that uses them).
 6. `typst_runner.py`, `typst_images.py`, and `typst_output.py` for the output and
    compile steps.
 7. `log.py` for how logging is wired.
@@ -1480,7 +1515,7 @@ If you want to read the code in the order it executes, follow this path:
 
 - **Two entry points, one pipeline.** `app.convert_deck` (library) and
   `api.app.create_app` (web, via `run_job`) both call `graph.build_graph` and run the
-  same eight nodes.
+  same ten nodes.
 - **One state object.** `PipelineState` flows through every node; the field order in
   `state.py` mirrors the pipeline order, and the AI selection/provenance fields ride
   along with it.
