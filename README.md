@@ -36,8 +36,10 @@ flowchart TD
     flatten --> strip_overlays
     strip_overlays --> split_deck
     split_deck --> convert
-    convert -->|more frames| convert
-    convert -->|done| assemble
+    convert --> preview
+    preview --> review
+    review -->|more frames| convert
+    review -->|done| assemble
     assemble --> write_output
     write_output --> compile
     compile --> stop([END])
@@ -47,7 +49,11 @@ flowchart TD
 ```
 
 The shaded `convert` node is the only LLM step; it runs once per Beamer frame in
-a cycle. Every other node is deterministic.
+a cycle, followed by `preview` and `review`. Every other node is deterministic.
+With per-frame review enabled (the testing UI's "review each frame" toggle), the
+`review` node pauses the graph after each frame so a reviewer can approve it or
+send feedback for regeneration; with review off, frames are accepted
+automatically and the pipeline behaves exactly as before.
 
 ### Nodes
 
@@ -72,16 +78,24 @@ a cycle. Every other node is deterministic.
    and bibliography frames are excluded because the scaffold renders them.
 7. `convert` (LLM): The only model call, run once per frame in a graph cycle.
    Each invocation translates one Beamer frame into a `==` frame-title heading
-   plus body, using the preamble, the reference presentation, and the Typst math
-   guide as context. A wrapping markdown code fence is stripped deterministically.
-8. `assemble` (deterministic): Builds the final deck: the header (imports,
+   plus body (the `candidate`), using the preamble, the reference presentation,
+   the Typst math guide, and any reviewer feedback as context. A wrapping
+   markdown code fence is stripped deterministically.
+8. `preview` (deterministic): With review enabled, assembles the deck so far
+   (header plus already-approved frames plus the candidate, no bibliography) and
+   compiles it to `preview.pdf` so the reviewer sees the new frame in context. A
+   no-op when review is off.
+9. `review`: With review off, commits the candidate and advances. With review
+   on, pauses the graph (a LangGraph interrupt) until the reviewer approves (the
+   frame is committed) or regenerates with feedback (the same frame is redone).
+10. `assemble` (deterministic): Builds the final deck: the header (imports,
    theme, `config-info` from the metadata, title slide), an optional outline,
    the converted frame bodies interleaved with `= Section` headings, and an
    optional bibliography plus thank-you slide.
-9. `write_output` (deterministic): Normalizes `image()` references to the
+11. `write_output` (deterministic): Normalizes `image()` references to the
    copied filenames (with extension), writes `main.typ` to the output
    directory, and copies the referenced images and the `.bib` alongside it.
-10. `compile` (deterministic): Runs `typst compile` on `main.typ` and records
+12. `compile` (deterministic): Runs `typst compile` on `main.typ` and records
     the result (PDF path on success, error text on failure); failures are
     recorded, not yet retried.
 
@@ -168,6 +182,13 @@ model and prompt version each node used, the generated `main.typ` in an editor
 (save to recompile), the compiled PDF, and any compile error. Click any pipeline
 node to inspect the LangGraph state captured after that step (the accumulated
 state, with the fields that node changed highlighted).
+
+Tick "review each frame" to convert one frame at a time: the run pauses after
+each frame and a review panel shows the candidate Typst and a compiled preview
+of the deck so far. Approve to accept the frame and move on, or type feedback
+and Regenerate to redo just that frame. A paused review lives in the server's
+memory, so it survives until the dev server stops (durable persistence across
+restarts is a later, SaaS-stage concern).
 
 ## Logs
 

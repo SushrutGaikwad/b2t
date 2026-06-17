@@ -126,11 +126,12 @@ compiles it to a PDF. There are **two ways to run it**:
    `b2t.app.convert_deck(input_dir, output_dir)`.
 2. **As a web app** - start a server (`b2t.api.app:app`) and use the browser UI.
 
-Both paths build and run the **same pipeline**: a chain of **ten steps**
-("nodes"). **Nine nodes are plain Python.** **One node calls an AI model** to do
+Both paths build and run the **same pipeline**: a chain of **twelve steps**
+("nodes"). **Eleven nodes are plain Python.** **One node calls an AI model** to do
 the actual Beamer-to-Typst translation, once per Beamer frame in a loop. A single
-object, `PipelineState`, is passed through all ten nodes; each node reads some of
-its fields and writes others.
+object, `PipelineState`, is passed through all twelve nodes; each node reads some
+of its fields and writes others. With per-frame review enabled, the `review` node
+pauses the graph after each frame so a human can approve or regenerate it.
 
 The one AI node does not talk to a model directly. It goes through a small, swappable
 **client** (`llm.py`) and pulls its wording from a **prompt registry** (`prompts/`)
@@ -193,8 +194,8 @@ b2t/
     nodes/                one file per pipeline step (thin wrappers)
       _llm.py             run_prompt(): the shared helper every AI node uses
       copy_input.py  clean_build.py  detect_main.py  flatten.py
-      strip_overlays.py  split_deck.py  convert_frame.py  assemble.py
-      write_output.py  compile.py
+      strip_overlays.py  split_deck.py  convert_frame.py  preview.py
+      review.py  assemble.py  write_output.py  compile.py
 
     latex/                the deterministic LaTeX logic the nodes call
       aspect.py  cleanup.py  detect.py  includes.py  flatten.py  overlays.py
@@ -207,10 +208,11 @@ b2t/
       static/             index.html, app.js, style.css (the browser UI)
 
   prompts/                the prompt registry (versioned AI wording, see section 7)
-    defaults.json         { "convert": "v3" }: the default version per node
+    defaults.json         { "convert": "v4" }: the default version per node
     convert/v1.toml       the original whole-deck prompt (kept for history)
     convert/v2.toml       whole-deck, adds the aspect-ratio directive (history)
-    convert/v3.toml       the default: per-frame conversion
+    convert/v3.toml       per-frame conversion (kept for history)
+    convert/v4.toml       the default: per-frame, feedback-aware
 
   files/                  data the converter reads (not code)
     reference/touying_reference_presentation.typ   the canonical example deck
@@ -509,11 +511,12 @@ file:
 
 ```txt
 prompts/
-  defaults.json          { "convert": "v3" }   the default version per node
+  defaults.json          { "convert": "v4" }   the default version per node
   convert/
     v1.toml              the original whole-deck prompt (kept for history)
     v2.toml              whole-deck + aspect-ratio directive (kept for history)
-    v3.toml              the default: per-frame conversion
+    v3.toml              per-frame conversion (kept for history)
+    v4.toml              the default: per-frame, feedback-aware
 ```
 
 Each version file is **TOML** (a simple config format read with Python's built-in
@@ -599,26 +602,27 @@ general so future AI nodes need no new plumbing.
 
 ## 8. The pipeline definition (`graph.py`)
 
-### `build_graph(client: LLMClient)`
+### `build_graph(client: LLMClient, checkpointer=None)`
 
-This function wires the ten node functions into a LangGraph `StateGraph` (a graph
+This function wires the twelve node functions into a LangGraph `StateGraph` (a graph
 whose shared data type is `PipelineState`), then compiles and returns it. The body
 does three things:
 
-1. **Registers nodes** with `graph.add_node(name, fn)`. Nine nodes are added
+1. **Registers nodes** with `graph.add_node(name, fn)`. Eleven nodes are added
    directly. The AI node is special: `convert_frame` needs the client as a second
    argument, so it is registered under the name `convert` and bound with
    `partial(convert_frame, client=client)`. `functools.partial` pre-fills the
    `client` argument, producing a function LangGraph can call with just the state.
-2. **Adds edges** with `graph.add_edge(...)`, plus one **conditional edge** on
-   `convert`: `_more_frames` loops back to `convert` while frames remain, then
-   routes to `assemble`.
-3. **Returns `graph.compile()`** - a runnable graph object exposing `.invoke()`
-   (run once, return the final state) and `.stream()` (run and emit events as it
-   goes; the web layer uses this for live progress).
+2. **Adds edges** with `graph.add_edge(...)`, including `convert -> preview ->
+   review`, plus one **conditional edge** on `review`: `_more_frames` loops back to
+   `convert` while frames remain, then routes to `assemble`.
+3. **Returns `graph.compile(checkpointer=checkpointer)`** - a runnable graph object
+   exposing `.invoke()` and `.stream()`. The optional checkpointer is what lets a
+   review pause and later resume (see the job runner); the library path omits it.
 
-The graph is a straight line except for the `convert` self-loop, which runs the AI
-node once per Beamer frame before `assemble` stitches the deck together.
+The graph is a straight line except for the per-frame `convert -> preview -> review`
+loop. With review enabled, `review` pauses the graph on a LangGraph interrupt; with
+review off it auto-approves each frame and the loop runs to the end uninterrupted.
 
 ```mermaid
 flowchart TD
@@ -629,8 +633,10 @@ flowchart TD
     flatten --> strip_overlays
     strip_overlays --> split_deck
     split_deck --> convert
-    convert -->|more frames| convert
-    convert -->|done| assemble
+    convert --> preview
+    preview --> review
+    review -->|more frames| convert
+    review -->|done| assemble
     assemble --> write_output
     write_output --> compile
     compile --> END([END])
@@ -668,10 +674,12 @@ what.
 | 4   | `flatten`        | `main_tex`                                  | `included_tex`, `image_files`, `flattened_tex` | `latex.includes.parse_includes`, `latex.flatten.flatten` |
 | 5   | `strip_overlays` | `flattened_tex`                             | `stripped_tex`                                 | `latex.overlays.strip_overlays`                          |
 | 6   | `split_deck`     | `stripped_tex`, `work_dir`                  | `preamble`, `meta`, `frames`, `has_toc`, `bib_file` | `latex.split.*`, `latex.includes.detect_bib_file`   |
-| 7   | `convert`        | `preamble`, `frames`, `frame_index`, `llm_choices` | `converted_frames`, `frame_index`, `llm_runs`, `llm_rendered` | `nodes._llm.run_prompt`, `typst_output.strip_code_fence` |
-| 8   | `assemble`       | `meta`, `aspect_ratio`, `has_toc`, `frames`, `converted_frames`, `bib_file` | `typst_source`             | `typst_scaffold.assemble`                                |
-| 9   | `write_output`   | `typst_source`, `image_files`, `bib_file`, `output_dir` | `typst_path`, `typst_source`       | `typst_images.fix_image_paths`                           |
-| 10  | `compile`        | `typst_path`                                | `compiled`, `pdf_path`, `compile_error`        | `typst_runner.compile_typst`                             |
+| 7   | `convert`        | `preamble`, `frames`, `frame_index`, `feedback`, `llm_choices` | `candidate`, `llm_runs`, `llm_rendered` | `nodes._llm.run_prompt`, `typst_output.strip_code_fence` |
+| 8   | `preview`        | `hitl_enabled`, `frames`, `converted_frames`, `candidate` | `preview_path`, `preview_pdf`, `preview_error` | `typst_scaffold.assemble`, `typst_runner.compile_typst` |
+| 9   | `review`         | `hitl_enabled`, `candidate`, `frame_index`  | `converted_frames`, `frame_index`, `candidate`, `feedback` | `langgraph.types.interrupt`                       |
+| 10  | `assemble`       | `meta`, `aspect_ratio`, `has_toc`, `frames`, `converted_frames`, `bib_file` | `typst_source`             | `typst_scaffold.assemble`                                |
+| 11  | `write_output`   | `typst_source`, `image_files`, `bib_file`, `output_dir` | `typst_path`, `typst_source`       | `typst_images.fix_image_paths`                           |
+| 12  | `compile`        | `typst_path`                                | `compiled`, `pdf_path`, `compile_error`        | `typst_runner.compile_typst`                             |
 
 Now each node in detail, in execution order.
 
@@ -742,15 +750,31 @@ parameter (`client`), which is why `build_graph` binds it with `partial`. For
 
 1. Reads the reference deck and the math guide from disk (paths from `config.py`).
 2. Calls `run_prompt(state, "convert", client, {reference, guides, preamble,
-   frame})` (section 7.3), which resolves the model and prompt version, renders the
-   prompt, calls the client, and returns the output plus provenance and rendered
-   prompt.
+   feedback, frame})` (section 7.3), passing any reviewer `feedback` so a
+   regeneration is steered.
 3. Passes the model output through `strip_code_fence` (section 11.3).
-4. Returns the grown `converted_frames`, the next `frame_index`, and the merged
-   `llm_runs`/`llm_rendered` under the `convert` key. A conditional edge loops back
-   to this node until every frame is converted.
+4. Returns the result as `candidate` (not committed) plus the merged
+   `llm_runs`/`llm_rendered`. The `review` node, not this one, commits the frame
+   and advances `frame_index`.
 
-### 9.8 `assemble.py` - `assemble_node(state)`
+### 9.8 `preview.py` - `preview_node(state)`
+
+With review enabled, assembles the deck so far (header plus already-approved
+`converted_frames` plus the `candidate`, with no bibliography) via
+`typst_scaffold.assemble`, writes `output_dir/preview.typ`, and compiles it,
+returning `preview_path`, `preview_pdf`, and `preview_error`. A no-op (returns
+`{}`) when `hitl_enabled` is False.
+
+### 9.9 `review.py` - `review_node(state)`
+
+The human-review gate. When `hitl_enabled` is False it auto-approves: it appends
+the `candidate` to `converted_frames`, advances `frame_index`, and clears
+`candidate`/`feedback`. When True it calls `langgraph.types.interrupt(payload)`
+with the frame index, total, candidate, and preview status; on resume it either
+approves (the same commit-and-advance) or, on a regenerate decision, stores the
+`feedback` and leaves `frame_index` put so `convert` redoes the frame.
+
+### 9.10 `assemble.py` - `assemble_node(state)`
 
 Builds the final Typst deck deterministically from the scaffold and the converted
 frames (via `typst_scaffold.assemble`): the header (imports, theme, `config-info`
@@ -759,7 +783,7 @@ converted frame bodies interleaved with `= Section` headings, and an optional
 bibliography section plus thank-you slide when a `.bib` was found. Returns
 `{"typst_source": ...}`.
 
-### 9.9 `write_output.py` - `write_output(state)`
+### 9.11 `write_output.py` - `write_output(state)`
 
 Materializes the result on disk:
 
@@ -773,7 +797,7 @@ Materializes the result on disk:
 5. Returns `{"typst_path": ..., "typst_source": ...}` - it returns the corrected
    source so the saved state matches what is on disk.
 
-### 9.10 `compile.py` - `compile_node(state)`
+### 9.12 `compile.py` - `compile_node(state)`
 
 Calls `compile_typst(state.typst_path)` and maps the result into
 `{"compiled": result.ok, "pdf_path": result.pdf_path, "compile_error":
@@ -972,7 +996,7 @@ loop. It lives in four Python files plus a static frontend.
 
 This module owns the job lifecycle.
 
-- `PIPELINE_NODES` - a tuple naming the ten nodes in order, used as a reference for
+- `PIPELINE_NODES` - a tuple naming the twelve nodes in order, used as a reference for
   progress display.
 - `EXECUTOR = ThreadPoolExecutor(max_workers=2)` - a module-level thread pool. Job
   conversions run here so HTTP requests can return immediately. At most two jobs run
@@ -1003,6 +1027,8 @@ The job's status moves through a small set of states:
 stateDiagram-v2
     [*] --> queued
     queued --> running
+    running --> awaiting_review: review pause (HITL)
+    awaiting_review --> running: approve / regenerate
     running --> succeeded: compiled
     running --> compile_failed: typst error
     running --> failed: a node raised
@@ -1011,9 +1037,19 @@ stateDiagram-v2
     succeeded --> [*]
 ```
 
-- `run_job(store, job_id, input_dir, output_dir, make_client, choices=None)` - the
-  function the executor runs in the background. This is the bridge between the web
-  layer and the graph:
+**Per-frame review (HITL).** When a job is created with `hitl=True`, `run_job`
+builds the graph with a shared `InMemorySaver` checkpointer and a `thread_id`
+equal to the job id, then streams until the `review` node's `interrupt()` surfaces
+as an `__interrupt__` event. The job then becomes `awaiting_review` with the
+payload stored in `review`. `resume_job(store, job_id, action, feedback,
+make_client)` continues the same thread with `Command(resume={action, feedback})`,
+pausing again on the next frame or finalizing at the end. Both finalize from
+`graph.get_state(config).values`. A paused review lives only in this process's
+memory, so a server restart drops it.
+
+- `run_job(store, job_id, input_dir, output_dir, make_client, choices=None, hitl=False)`
+  - the function the executor runs in the background. This is the bridge between the
+  web layer and the graph:
   1. Seeds the graph input with the paths and `llm_choices` (from `choices`), sets
      status to `running`, and builds the graph. The client is built here, **inside
      the try/except**, via the `make_client` factory, so a missing API key records
@@ -1121,6 +1157,9 @@ optional `store` is what lets tests inject their own job store. The routes:
 | `GET /api/jobs/{id}/download`       | `download_job`       | Zips the output folder and returns it as `deck.zip`.                                                                                        |
 | `GET /api/jobs/{id}/prompt/{node}`  | `get_rendered_prompt`| Returns the exact prompt that node sent on this job's run (404 before a run, or for an unknown node).                                       |
 | `GET /api/jobs/{id}/state/{node}`   | `get_node_state`     | Returns the accumulated pipeline state after `node` ran (the snapshot the inspector shows), folded on demand from the seed and the per-node deltas; 404 before that node has run. |
+| `GET /api/jobs/{id}/review`         | `get_review`         | Returns the frame awaiting review (index, total, candidate Typst, preview status); 404 unless the job is `awaiting_review`. |
+| `GET /api/jobs/{id}/preview.pdf`    | `get_preview`        | Returns the deck-so-far preview PDF for the frame under review; 404 if not produced. |
+| `POST /api/jobs/{id}/review`        | `submit_review`      | Resumes a paused review with `{action, feedback}` (approve or regenerate); 400 if the job is not awaiting review or the action is unknown. |
 | `GET /api/sample-decks`             | `get_sample_decks`   | Returns the bundled sample deck names for the picker dropdown.                                                                              |
 | `GET /api/models`                   | `get_models`         | Returns the model list and default for the dropdown.                                                                                       |
 | `GET /api/llm-nodes`                | `get_llm_nodes`      | Returns each AI node with its prompt versions and default version (drives the per-node UI controls).                                        |
@@ -1503,7 +1542,7 @@ If you want to read the code in the order it executes, follow this path:
 3. `graph.py` to see the node order.
 4. `nodes/` in pipeline order, jumping into each `latex/` helper as you reach it.
 5. The LLM seam, in this order: `llm.py` (the client), `prompts.py` plus
-   `prompts/convert/v3.toml` (the wording), then `nodes/_llm.py` (the glue) and
+   `prompts/convert/v4.toml` (the wording), then `nodes/_llm.py` (the glue) and
    `nodes/convert_frame.py` (the one AI node that uses them).
 6. `typst_runner.py`, `typst_images.py`, and `typst_output.py` for the output and
    compile steps.
@@ -1515,7 +1554,7 @@ If you want to read the code in the order it executes, follow this path:
 
 - **Two entry points, one pipeline.** `app.convert_deck` (library) and
   `api.app.create_app` (web, via `run_job`) both call `graph.build_graph` and run the
-  same ten nodes.
+  same twelve nodes.
 - **One state object.** `PipelineState` flows through every node; the field order in
   `state.py` mirrors the pipeline order, and the AI selection/provenance fields ride
   along with it.
