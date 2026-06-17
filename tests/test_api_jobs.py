@@ -52,7 +52,7 @@ def test_update_mutates_record():
     assert rec.current_node == "flatten"
 
 
-def test_pipeline_nodes_are_the_ten_in_order():
+def test_pipeline_nodes_are_the_twelve_in_order():
     assert PIPELINE_NODES == (
         "copy_input",
         "clean_build",
@@ -61,6 +61,8 @@ def test_pipeline_nodes_are_the_ten_in_order():
         "strip_overlays",
         "split_deck",
         "convert",
+        "preview",
+        "review",
         "assemble",
         "write_output",
         "compile",
@@ -92,7 +94,7 @@ def test_run_job_records_llm_runs(tmp_path):
     rec = store.get(job.id)
     assert rec.llm_runs["convert"] == {
         "model": DEFAULT_MODEL,
-        "prompt_version": "v3",
+        "prompt_version": "v4",
     }
 
 
@@ -132,9 +134,11 @@ def test_run_job_captures_node_deltas(tmp_path):
             seen.append(d.node)
     assert seen == list(PIPELINE_NODES)
     convert = next(d for d in rec.node_deltas if d.node == "convert")
-    assert "converted_frames" in convert.changed
+    assert "candidate" in convert.changed
     assert "llm_runs" in convert.changed
     assert "llm_rendered" in convert.changed
+    review = next(d for d in rec.node_deltas if d.node == "review")
+    assert "converted_frames" in review.changed
     assert "input_dir" in rec.seed_state
     assert "output_dir" in rec.seed_state
 

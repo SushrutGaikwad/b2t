@@ -86,14 +86,20 @@ def test_default_version_unknown_node_raises(tmp_path):
         default_version("nope", base=tmp_path)
 
 
-def test_real_convert_default_is_v3():
-    assert P.default_version("convert") == "v3"
+def test_real_convert_default_is_v4():
+    assert P.default_version("convert") == "v4"
 
 
 def test_real_convert_v2_still_loadable():
     pv = P.load("convert", "v2")
     assert "Typst Touying" in pv.system
     assert "{{aspect_ratio}}" in pv.user_template
+
+
+def test_real_convert_v3_still_loadable():
+    pv = P.load("convert", "v3")
+    assert "{{frame}}" in pv.user_template
+    assert "{{feedback}}" not in pv.user_template
 
 
 def test_real_convert_v1_still_loadable_without_aspect_token():

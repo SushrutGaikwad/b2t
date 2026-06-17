@@ -10,6 +10,8 @@ from b2t.nodes.convert_frame import convert_frame
 from b2t.nodes.copy_input import copy_input
 from b2t.nodes.detect_main import detect_main
 from b2t.nodes.flatten import flatten_node
+from b2t.nodes.preview import preview_node
+from b2t.nodes.review import review_node
 from b2t.nodes.split_deck import split_deck
 from b2t.nodes.strip_overlays import strip_overlays_node
 from b2t.nodes.write_output import write_output
@@ -21,17 +23,19 @@ def _more_frames(state: PipelineState) -> str:
     return "convert" if state.frame_index < len(state.frames) else "assemble"
 
 
-def build_graph(client: LLMClient):
-    """Build and compile the per-frame conversion graph.
+def build_graph(client: LLMClient, checkpointer=None):
+    """Build and compile the per-frame conversion graph with optional review.
 
     Args:
         client: LLM client bound into the convert node; every other node is
             deterministic.
+        checkpointer: Optional LangGraph checkpointer; required for HITL pause
+            and resume. Omit it (None) for the straight-through library path.
 
     Returns:
-        A compiled LangGraph runnable: copy_input -> clean_build -> detect_main
-        -> flatten -> strip_overlays -> split_deck -> convert (self-loop over
-        frames) -> assemble -> write_output -> compile.
+        A compiled LangGraph runnable: copy_input -> ... -> split_deck -> convert
+        -> preview -> review (self-loop over frames) -> assemble -> write_output
+        -> compile.
     """
     graph = StateGraph(PipelineState)
 
@@ -42,6 +46,8 @@ def build_graph(client: LLMClient):
     graph.add_node("strip_overlays", strip_overlays_node)
     graph.add_node("split_deck", split_deck)
     graph.add_node("convert", partial(convert_frame, client=client))
+    graph.add_node("preview", preview_node)
+    graph.add_node("review", review_node)
     graph.add_node("assemble", assemble_node)
     graph.add_node("write_output", write_output)
     graph.add_node("compile", compile_node)
@@ -53,11 +59,13 @@ def build_graph(client: LLMClient):
     graph.add_edge("flatten", "strip_overlays")
     graph.add_edge("strip_overlays", "split_deck")
     graph.add_edge("split_deck", "convert")
+    graph.add_edge("convert", "preview")
+    graph.add_edge("preview", "review")
     graph.add_conditional_edges(
-        "convert", _more_frames, {"convert": "convert", "assemble": "assemble"}
+        "review", _more_frames, {"convert": "convert", "assemble": "assemble"}
     )
     graph.add_edge("assemble", "write_output")
     graph.add_edge("write_output", "compile")
     graph.add_edge("compile", END)
 
-    return graph.compile()
+    return graph.compile(checkpointer=checkpointer)

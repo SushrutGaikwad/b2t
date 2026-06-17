@@ -19,6 +19,8 @@ PIPELINE_NODES = (
     "strip_overlays",
     "split_deck",
     "convert",
+    "preview",
+    "review",
     "assemble",
     "write_output",
     "compile",
@@ -158,6 +160,7 @@ def run_job(
                     store.update(job_id, current_node=node)
             else:
                 for node_name, update in chunk.items():
+                    update = update or {}
                     state.update(update)
                     store.append_delta(
                         job_id,

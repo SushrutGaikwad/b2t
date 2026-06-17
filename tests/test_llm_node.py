@@ -13,14 +13,15 @@ def _state(**kwargs) -> PipelineState:
 
 
 # Superset of tokens across convert prompt versions; render ignores keys a
-# given template does not reference, so this works for v1/v2 (source) and v3
-# (preamble, frame).
+# given template does not reference, so this works for v1/v2 (source), v3
+# (preamble, frame), and v4 (feedback).
 _VALUES = {
     "reference": "R",
     "guides": "G",
     "source": "SRC",
     "aspect_ratio": "4-3",
     "preamble": "PRE",
+    "feedback": "FB",
     "frame": "FRAMEBODY",
 }
 
@@ -29,7 +30,7 @@ def test_run_prompt_uses_defaults_and_returns_run(monkeypatch):
     monkeypatch.delenv("B2T_MODEL", raising=False)
     out, run, rendered = run_prompt(_state(), "convert", FakeClient("OUT"), _VALUES)
     assert out == "OUT"
-    assert run == NodeRun(model=DEFAULT_MODEL, prompt_version="v3")
+    assert run == NodeRun(model=DEFAULT_MODEL, prompt_version="v4")
     assert "FRAMEBODY" in rendered.user
     assert rendered.system
 

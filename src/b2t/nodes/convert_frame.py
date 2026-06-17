@@ -7,20 +7,29 @@ from b2t.state import PipelineState
 from b2t.typst_output import strip_code_fence
 
 
-def convert_frame(state: PipelineState, client: LLMClient) -> dict:
-    """Convert one beamer frame to Typst; registered in the graph as `convert`.
+def _feedback_block(feedback: str | None) -> str:
+    """Frame reviewer feedback for the prompt, or empty when there is none."""
+    if not feedback:
+        return ""
+    return (
+        "\nThe reviewer reviewed a previous attempt at this frame and asked for "
+        f"these changes; address them:\n{feedback}\n"
+    )
 
-    Translates frames[frame_index] into a == heading plus body, appends it to
-    converted_frames, and advances frame_index. A conditional edge loops back
-    until every frame is converted.
+
+def convert_frame(state: PipelineState, client: LLMClient) -> dict:
+    """Produce a candidate Typst conversion for the current frame.
+
+    Does not commit or advance; the review node does that on approval. Uses
+    state.feedback to steer a regeneration. Registered in the graph as `convert`.
 
     Args:
-        state: Pipeline state carrying preamble, frames, frame_index.
+        state: Pipeline state carrying preamble, frames, frame_index, feedback.
         client: LLM client (bound via functools.partial when the graph is built).
 
     Returns:
-        State update with the grown converted_frames, the next frame_index, and
-        merged provenance under the `convert` key.
+        State update with candidate plus merged provenance under the `convert`
+        key.
     """
     frame = state.frames[state.frame_index]
     reference = REFERENCE_DECK.read_text(encoding="utf-8")
@@ -34,12 +43,12 @@ def convert_frame(state: PipelineState, client: LLMClient) -> dict:
             "reference": reference,
             "guides": guides,
             "preamble": state.preamble or "",
+            "feedback": _feedback_block(state.feedback),
             "frame": frame.raw,
         },
     )
     return {
-        "converted_frames": [*state.converted_frames, strip_code_fence(output)],
-        "frame_index": state.frame_index + 1,
+        "candidate": strip_code_fence(output),
         "llm_runs": {**state.llm_runs, "convert": run},
         "llm_rendered": {**state.llm_rendered, "convert": rendered},
     }

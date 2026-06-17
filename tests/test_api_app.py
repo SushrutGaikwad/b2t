@@ -284,7 +284,7 @@ def test_real_job_without_key_records_failed(monkeypatch):
 def test_llm_nodes_endpoint_lists_convert_with_versions():
     body = _client().get("/api/llm-nodes").json()
     convert = next(n for n in body["nodes"] if n["node"] == "convert")
-    assert convert["default_version"] == "v3"
+    assert convert["default_version"] == "v4"
     v1 = next(v for v in convert["versions"] if v["id"] == "v1")
     assert v1["label"] == "v1 - simple prompt"
     v2 = next(v for v in convert["versions"] if v["id"] == "v2")
@@ -356,7 +356,7 @@ def test_rendered_prompt_available_after_run():
     client = _client()
     job_id = _run_sample(client)
     body = client.get(f"/api/jobs/{job_id}/prompt/convert").json()
-    assert body["prompt_version"] == "v3"
+    assert body["prompt_version"] == "v4"
     assert "single LaTeX Beamer frame" in body["system"]
     assert "Reference Touying presentation" in body["user"]
 
@@ -375,9 +375,9 @@ def test_node_state_available_after_run():
     client = _client()
     job_id = _run_sample(client)
     body = client.get(f"/api/jobs/{job_id}/state/convert").json()
-    assert body["node"] == "convert"
-    assert "converted_frames" in body["changed"]
-    assert "frames" in body["state"]
+    assert "candidate" in body["changed"]
+    review = client.get(f"/api/jobs/{job_id}/state/review").json()
+    assert "converted_frames" in review["changed"]
     asm = client.get(f"/api/jobs/{job_id}/state/assemble").json()
     assert "typst_source" in asm["changed"]
 
