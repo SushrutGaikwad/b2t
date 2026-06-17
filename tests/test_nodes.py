@@ -165,3 +165,35 @@ def test_split_deck_node_raises_without_frames(tmp_path):
     stripped = "\\documentclass{beamer}\n\\begin{document}\n\\end{document}\n"
     with pytest.raises(ValueError):
         split_deck(_state(stripped_tex=stripped, work_dir=tmp_path))
+
+
+def test_assemble_node_builds_typst_source():
+    from b2t.nodes.assemble import assemble_node
+    from b2t.state import DeckMeta, FrameUnit
+
+    state = _state(
+        meta=DeckMeta(title="T"),
+        aspect_ratio="16-9",
+        has_toc=False,
+        frames=[FrameUnit(raw="", section="Intro")],
+        converted_frames=["== Motivation\n\nbody"],
+    )
+    update = assemble_node(state)
+    assert 'aspect-ratio: "16-9"' in update["typst_source"]
+    assert "= Intro" in update["typst_source"]
+    assert "== Motivation" in update["typst_source"]
+
+
+def test_assemble_node_includes_bibliography_when_bib_present(tmp_path):
+    from b2t.nodes.assemble import assemble_node
+    from b2t.state import FrameUnit
+
+    bib = tmp_path / "references.bib"
+    bib.write_text("", encoding="utf-8")
+    state = _state(
+        frames=[FrameUnit(raw="", section=None)],
+        converted_frames=["== X\n\nbody"],
+        bib_file=bib,
+    )
+    update = assemble_node(state)
+    assert '#bibliography("references.bib"' in update["typst_source"]
