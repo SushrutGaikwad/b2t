@@ -1,6 +1,7 @@
 """Deterministic assembly of the Typst Touying deck from converted frames."""
 
 import re
+from datetime import date
 
 from b2t.state import DeckMeta, FrameUnit
 
@@ -16,25 +17,41 @@ _MONTHS = {
 }
 
 
+def _typst_datetime(year: int, month: int, day: int) -> str | None:
+    """Return a Typst datetime(...) for a real calendar date, else None.
+
+    Guards against shape-valid but out-of-range dates (month 13, Feb 31) so the
+    scaffold never emits Typst that fails to compile.
+    """
+    try:
+        date(year, month, day)
+    except ValueError:
+        return None
+    return f"datetime(year: {year}, month: {month}, day: {day})"
+
+
 def render_date(date_raw: str | None) -> str:
     """Return a Typst date expression for a raw beamer \\date argument.
 
-    Tries YYYY-MM-DD, 'Month DD, YYYY', and 'Month YYYY' (day defaults to 1).
-    Anything else (including \\today or free text) falls back to
-    datetime.today(), keeping the original text in a trailing comment.
+    Tries YYYY-MM-DD, 'Month DD, YYYY', and 'Month YYYY' (day defaults to 1),
+    validating each as a real calendar date. Anything else (including \\today,
+    free text, or an out-of-range date) falls back to datetime.today(), keeping
+    the original text in a trailing comment.
     """
     if date_raw:
         text = date_raw.strip()
         iso = re.fullmatch(r"(\d{4})-(\d{1,2})-(\d{1,2})", text)
         if iso:
-            y, m, d = (int(g) for g in iso.groups())
-            return f"datetime(year: {y}, month: {m}, day: {d})"
+            expr = _typst_datetime(*(int(g) for g in iso.groups()))
+            if expr:
+                return expr
         mdy = re.fullmatch(r"([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})", text)
         if mdy and mdy.group(1).lower() in _MONTHS:
-            return (
-                f"datetime(year: {int(mdy.group(3))}, "
-                f"month: {_MONTHS[mdy.group(1).lower()]}, day: {int(mdy.group(2))})"
+            expr = _typst_datetime(
+                int(mdy.group(3)), _MONTHS[mdy.group(1).lower()], int(mdy.group(2))
             )
+            if expr:
+                return expr
         my = re.fullmatch(r"([A-Za-z]+)\s+(\d{4})", text)
         if my and my.group(1).lower() in _MONTHS:
             return (

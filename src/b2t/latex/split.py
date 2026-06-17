@@ -26,8 +26,11 @@ def split_preamble(stripped: str) -> tuple[str, str]:
 
 
 def _field(name: str, preamble: str) -> str | None:
-    """Return the brace argument of \\name in the preamble, or None."""
-    match = re.search(rf"\\{name}\{{([^}}]*)\}}", preamble)
+    """Return the brace argument of \\name in the preamble, or None.
+
+    Tolerates Beamer's optional short form, e.g. \\title[Short]{The Long Title}.
+    """
+    match = re.search(rf"\\{name}(?:\[[^\]]*\])?\{{([^}}]*)\}}", preamble)
     return match.group(1).strip() if match else None
 
 
@@ -55,6 +58,9 @@ _TOKEN_RE = re.compile(
 # Frames whose body holds one of these are rendered by the scaffold, not the LLM.
 _SCAFFOLD_FRAME_MARKERS = (r"\titlepage", r"\tableofcontents", r"\printbibliography")
 
+# The \frame{...} / \frame<...>{...} shorthand, but not \frametitle{...}.
+_FRAME_SHORTHAND_RE = re.compile(r"\\frame(?=[\s<{])")
+
 
 def split_frames(body: str) -> tuple[list[FrameUnit], bool]:
     """Split the document body into section-tagged frames.
@@ -71,15 +77,20 @@ def split_frames(body: str) -> tuple[list[FrameUnit], bool]:
         was present.
 
     Raises:
-        ValueError: If a \\begin{frame} has no matching \\end{frame}.
+        ValueError: If a \\begin{frame} has no matching \\end{frame}, or if the
+            \\frame{...} shorthand is used (it would otherwise be silently lost).
     """
+    if _FRAME_SHORTHAND_RE.search(body):
+        raise ValueError(
+            r"\frame{...} shorthand is not supported; use \begin{frame}...\end{frame}"
+        )
     frames: list[FrameUnit] = []
     has_toc = False
     current_section: str | None = None
     matched = 0
     for match in _TOKEN_RE.finditer(body):
         if match.group("section") is not None:
-            current_section = match.group("section").strip()
+            current_section = match.group("section").strip() or None
             continue
         matched += 1
         inner = match.group("frame")

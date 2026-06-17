@@ -45,6 +45,12 @@ def test_parse_meta_missing_fields_are_none():
     assert meta.author is None
 
 
+def test_parse_meta_handles_optional_short_argument():
+    meta = parse_meta("\\title[Short]{The Long Title}\n\\author[JD]{Jane Doe}")
+    assert meta.title == "The Long Title"
+    assert meta.author == "Jane Doe"
+
+
 from b2t.latex.split import split_frames
 
 BODY = r"""
@@ -85,3 +91,20 @@ def test_split_frames_excludes_printbibliography_frame():
 def test_split_frames_unmatched_begin_raises():
     with pytest.raises(ValueError):
         split_frames(r"\begin{frame}{X}a")
+
+
+def test_split_frames_frame_shorthand_raises():
+    # \frame{...} shorthand must fail loud, not silently drop its content
+    with pytest.raises(ValueError):
+        split_frames(r"\frame{Hello}\begin{frame}{X}a\end{frame}")
+
+
+def test_split_frames_frametitle_is_not_shorthand():
+    # \frametitle{...} inside a normal frame must not trip the shorthand guard
+    frames, _ = split_frames(r"\begin{frame}\frametitle{T}body\end{frame}")
+    assert len(frames) == 1
+
+
+def test_split_frames_empty_section_is_none():
+    frames, _ = split_frames(r"\section{}\begin{frame}{X}a\end{frame}")
+    assert frames[0].section is None

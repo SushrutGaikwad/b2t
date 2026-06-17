@@ -23,6 +23,18 @@ def test_render_date_none_is_today():
     assert render_date(None) == "datetime.today()"
 
 
+def test_render_date_invalid_month_falls_back():
+    out = render_date("2026-13-01")
+    assert out.startswith("datetime.today()")
+    assert "2026-13-01" in out
+
+
+def test_render_date_invalid_day_falls_back():
+    out = render_date("February 31, 2026")
+    assert out.startswith("datetime.today()")
+    assert "February 31, 2026" in out
+
+
 from b2t.state import DeckMeta, FrameUnit
 from b2t.typst_scaffold import assemble, build_header
 
