@@ -11,12 +11,14 @@ from b2t.typst_scaffold import assemble
 def preview_node(state: PipelineState) -> dict:
     """Compile a preview of the deck so far, for human review (HITL only).
 
-    Assembles the header, already-approved frames, and the current candidate
-    (no bibliography or thank-you slide) and compiles it. Image references are
-    normalized and the image files copied alongside preview.typ, the same as the
-    final write_output, so a frame referencing an image compiles during review
-    (write_output only runs after the whole loop). A no-op when review is
-    disabled, so the library and offline paths skip the extra compile.
+    Assembles the header, already-approved frames, and the current candidate,
+    appending the bibliography and thank-you slide when the deck has a .bib so a
+    frame whose citations resolve against it compiles during review. Image
+    references are normalized and the image files and the .bib copied alongside
+    preview.typ, the same as the final write_output, so a frame referencing an
+    image or a citation compiles during review (write_output only runs after the
+    whole loop). A no-op when review is disabled, so the library and offline
+    paths skip the extra compile.
 
     Returns:
         State update with preview_path, preview_pdf, and preview_error; an empty
@@ -26,13 +28,16 @@ def preview_node(state: PipelineState) -> dict:
         return {}
     converted = [*state.converted_frames, state.candidate]
     frames = state.frames[: state.frame_index + 1]
+    bib_name = state.bib_file.name if state.bib_file else None
     source = assemble(
-        state.meta, state.aspect_ratio, state.has_toc, frames, converted, None
+        state.meta, state.aspect_ratio, state.has_toc, frames, converted, bib_name
     )
     source = fix_image_paths(source, state.image_files)
     state.output_dir.mkdir(parents=True, exist_ok=True)
     for image in state.image_files:
         shutil.copy2(image, state.output_dir / image.name)
+    if state.bib_file:
+        shutil.copy2(state.bib_file, state.output_dir / state.bib_file.name)
     preview_path = state.output_dir / "preview.typ"
     preview_path.write_text(source, encoding="utf-8")
     result = compile_typst(preview_path)

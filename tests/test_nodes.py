@@ -197,7 +197,7 @@ def test_preview_node_skips_when_hitl_disabled():
     assert preview_node(state) == {}
 
 
-def test_preview_node_assembles_without_bibliography(tmp_path):
+def test_preview_node_no_bibliography_without_bib(tmp_path):
     from b2t.nodes.preview import preview_node
     from b2t.state import DeckMeta, FrameUnit
 
@@ -209,14 +209,60 @@ def test_preview_node_assembles_without_bibliography(tmp_path):
         frame_index=0,
         converted_frames=[],
         candidate="== Slide\n\nbody",
-        bib_file=tmp_path / "references.bib",
+        bib_file=None,
     )
     update = preview_node(state)
     assert update["preview_path"] == tmp_path / "out" / "preview.typ"
     text = (tmp_path / "out" / "preview.typ").read_text(encoding="utf-8")
     assert "== Slide" in text
     assert "#title-slide()" in text
-    assert "#bibliography" not in text  # previews never show the bibliography
+    assert "#bibliography" not in text
+
+
+def test_preview_node_includes_bibliography_when_bib_present(tmp_path):
+    from b2t.nodes.preview import preview_node
+    from b2t.state import DeckMeta, FrameUnit
+
+    bib = tmp_path / "references.bib"
+    bib.write_text("", encoding="utf-8")
+    state = _state(
+        output_dir=tmp_path / "out",
+        hitl_enabled=True,
+        meta=DeckMeta(title="T"),
+        frames=[FrameUnit(raw="", section=None)],
+        frame_index=0,
+        converted_frames=[],
+        candidate="== Slide\n\nbody",
+        bib_file=bib,
+    )
+    preview_node(state)
+    text = (tmp_path / "out" / "preview.typ").read_text(encoding="utf-8")
+    # the bibliography must be present from the first preview so a frame with a
+    # citation resolves instead of failing to compile
+    assert '#bibliography("references.bib"' in text
+    assert (tmp_path / "out" / "references.bib").exists()
+
+
+def test_preview_node_citation_frame_compiles(tmp_path):
+    from b2t.nodes.preview import preview_node
+    from b2t.state import DeckMeta, FrameUnit
+    from b2t.typst_runner import typst_available
+
+    deck2 = Path(__file__).parent / "fixtures" / "sample_decks" / "deck2"
+    state = _state(
+        output_dir=tmp_path / "out",
+        hitl_enabled=True,
+        meta=DeckMeta(title="T"),
+        frames=[FrameUnit(raw="", section="Intro")],
+        frame_index=0,
+        converted_frames=[],
+        candidate="== Citations\n\nSee @hawking1975particle and @einstein1935can.",
+        bib_file=deck2 / "references.bib",
+    )
+    update = preview_node(state)
+    if typst_available():
+        assert update["preview_error"] is None
+        assert update["preview_pdf"] is not None
 
 
 def test_preview_node_normalizes_image_paths_and_copies_images(tmp_path):
