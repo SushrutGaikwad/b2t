@@ -173,3 +173,33 @@ def test_convert_frame_passes_preamble_and_frame_into_prompt():
     convert_frame(state, client=Recorder())
     assert "MYPREAMBLE" in captured["user"]
     assert "MYFRAME" in captured["user"]
+
+
+def test_preview_node_skips_when_hitl_disabled():
+    from b2t.nodes.preview import preview_node
+    from b2t.state import FrameUnit
+
+    state = _state(hitl_enabled=False, frames=[FrameUnit(raw="")], candidate="== X\n\nb")
+    assert preview_node(state) == {}
+
+
+def test_preview_node_assembles_without_bibliography(tmp_path):
+    from b2t.nodes.preview import preview_node
+    from b2t.state import DeckMeta, FrameUnit
+
+    state = _state(
+        output_dir=tmp_path / "out",
+        hitl_enabled=True,
+        meta=DeckMeta(title="T"),
+        frames=[FrameUnit(raw="", section=None)],
+        frame_index=0,
+        converted_frames=[],
+        candidate="== Slide\n\nbody",
+        bib_file=tmp_path / "references.bib",
+    )
+    update = preview_node(state)
+    assert update["preview_path"] == tmp_path / "out" / "preview.typ"
+    text = (tmp_path / "out" / "preview.typ").read_text(encoding="utf-8")
+    assert "== Slide" in text
+    assert "#title-slide()" in text
+    assert "#bibliography" not in text  # previews never show the bibliography
