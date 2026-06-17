@@ -22,10 +22,11 @@ tagging for blind and visually impaired readers as the driving goal.
 
 ## Architecture (v0)
 
-The pipeline is a linear LangGraph `StateGraph` over a single Pydantic
-`PipelineState`. Everything that can be done without an LLM is done in plain
-Python; the one LLM call handles only the Beamer to Touying translation. The
-Typst compiler is the final arbiter of success.
+The pipeline is a LangGraph `StateGraph` over a single Pydantic
+`PipelineState`, with a per-frame `convert -> preview -> review` cycle.
+Everything that can be done without an LLM is done in plain Python; the one LLM
+step translates the deck one Beamer frame at a time. The Typst compiler is the
+final arbiter of success.
 
 ```mermaid
 flowchart TD
