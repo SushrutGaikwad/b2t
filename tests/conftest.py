@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-SAMPLE_DECK = Path(__file__).parent / "fixtures" / "sample_deck"
+SAMPLE_DECK = Path(__file__).parent / "fixtures" / "sample_decks" / "deck1"
 
 # Build files shipped with the sample deck; the workflow accepts decks with
 # build artifacts, and clean_build must delete exactly these.

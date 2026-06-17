@@ -219,9 +219,9 @@ b2t/
     specs/                one design document per feature
     plans/                one step-by-step implementation plan per feature
 
-  tests/                  pytest suite (160 tests across 21 files) + fixtures
-    conftest.py           shared fixture (a writable copy of the sample deck)
-    fixtures/sample_deck/ a minimal Beamer deck used throughout the tests
+  tests/                  pytest suite (164 tests across 21 files) + fixtures
+    conftest.py           shared fixture (a writable copy of a sample deck)
+    fixtures/sample_decks/ bundled Beamer decks (deck1 plain, deck2 with a bib)
     test_*.py             one test module per source module
 
   .github/workflows/ci.yml   the continuous-integration workflow (see section 17)
@@ -1046,12 +1046,16 @@ ASGI object the server (uvicorn) serves: `uvicorn b2t.api.app:app`.
 
 Module constants:
 
-- `SAMPLE_DECK` - path to the bundled test fixture deck (for one-click demos).
+- `SAMPLE_DECKS_DIR` - path to the bundled sample-decks folder; each
+  subdirectory is one selectable demo deck.
 - `STATIC_DIR` - the `static/` folder.
 - `FAKE_TYPST` - a tiny valid Typst document the fake client returns.
 
 Helper functions:
 
+- `_sample_deck_names()` - lists the bundled sample decks (the subdirectories of
+  `SAMPLE_DECKS_DIR`, sorted); it drives both the picker dropdown and the
+  deck-name validation, so a new `deckN/` folder needs no code change.
 - `_make_client(use_fake)` - returns a `FakeClient(FAKE_TYPST)` when offline mode is
   requested, otherwise an `OpenRouterClient()`.
 - `_parse_choices(raw)` - parses and validates the per-node choices JSON from a form
@@ -1074,7 +1078,7 @@ optional `store` is what lets tests inject their own job store. The routes:
 | Method + path                       | Handler              | What it does                                                                                                                                |
 | ----------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | `POST /api/jobs`                    | `create_job`         | Reconstructs the uploaded folder, validates the optional per-node `choices`, creates a job, submits `run_job`. Rejects empty uploads with 400. |
-| `POST /api/jobs/sample`             | `create_sample_job`  | Same, but runs the bundled sample deck.                                                                                                     |
+| `POST /api/jobs/sample`             | `create_sample_job`  | Runs a chosen bundled sample deck. The `deck` form field names a subdirectory (empty picks the first); an unknown name is rejected with 400. |
 | `GET /api/jobs/{id}`                | `get_job`            | Returns the `JobView` (404 if unknown). The UI polls this once a second.                                                                    |
 | `GET /api/jobs/{id}/typ`            | `get_typ`            | Returns the generated Typst source as plain text.                                                                                          |
 | `GET /api/jobs/{id}/pdf`            | `get_pdf`            | Returns the compiled PDF file.                                                                                                              |
@@ -1082,6 +1086,7 @@ optional `store` is what lets tests inject their own job store. The routes:
 | `GET /api/jobs/{id}/download`       | `download_job`       | Zips the output folder and returns it as `deck.zip`.                                                                                        |
 | `GET /api/jobs/{id}/prompt/{node}`  | `get_rendered_prompt`| Returns the exact prompt that node sent on this job's run (404 before a run, or for an unknown node).                                       |
 | `GET /api/jobs/{id}/state/{node}`   | `get_node_state`     | Returns the accumulated pipeline state after `node` ran (the snapshot the inspector shows), folded on demand from the seed and the per-node deltas; 404 before that node has run. |
+| `GET /api/sample-decks`             | `get_sample_decks`   | Returns the bundled sample deck names for the picker dropdown.                                                                              |
 | `GET /api/models`                   | `get_models`         | Returns the model list and default for the dropdown.                                                                                       |
 | `GET /api/llm-nodes`                | `get_llm_nodes`      | Returns each AI node with its prompt versions and default version (drives the per-node UI controls).                                        |
 | `GET /api/prompts/{node}/{version}` | `get_prompt_content` | Returns a prompt version's `system` and `user_template` (404 for unknown node/version). The template preview.                              |
@@ -1138,7 +1143,8 @@ carry inline controls and a prompt preview.
 The page skeleton. Three sections:
 
 - **Submit**: a folder picker (`<input webkitdirectory>`), a "use fake converter
-  (offline)" checkbox, and "Convert folder" / "Use sample deck" buttons.
+  (offline)" checkbox, a sample-deck dropdown (`<select id="sample-deck">`), and
+  "Convert folder" / "Use sample deck" buttons.
 - **Status**: a status badge, a `#graph` container for the custom pipeline strip, a
   `#graph-hint` line telling the user to click a node to inspect its state, a hidden
   `#state-inspector` panel that holds the per-node state view, a `#llm-nodes`
@@ -1175,6 +1181,8 @@ The client logic, plain JavaScript. Key pieces:
   `/api/jobs/{currentJobId}/prompt/{node}` and shows the exact prompt sent on the
   last run, labelled "as run: model, version"; before any run it shows a hint to run
   the pipeline first). Changing the version dropdown re-fetches the template view.
+- `loadSampleDecks()` - fetches `/api/sample-decks` and fills the sample-deck
+  dropdown; called once on load, alongside `loadGraph`/`loadLLMNodes`.
 - `collectChoices()` - gathers the per-node dropdowns into a `{node: {model,
   prompt_version}}` object; `commonFields()` attaches that JSON plus the "use fake"
   flag to each submission.
@@ -1198,8 +1206,9 @@ The client logic, plain JavaScript. Key pieces:
   natively, so any snapshot size reaches the bottom. `selectNode`/`hideInspector`
   manage the selected-node outline, and starting a new run hides the panel.
 - Button handlers: "Convert folder" gathers the picked files (with their relative
-  paths) and POSTs to `/api/jobs`; "Use sample deck" POSTs to `/api/jobs/sample`;
-  "Save and compile" POSTs the edited source to `/save` and refreshes the PDF;
+  paths) and POSTs to `/api/jobs`; "Use sample deck" POSTs the selected dropdown
+  deck to `/api/jobs/sample`; "Save and compile" POSTs the edited source to `/save`
+  and refreshes the PDF;
   "Download" navigates to the download endpoint.
 
 ### 14.3 `style.css`
@@ -1292,7 +1301,7 @@ sequenceDiagram
 
 ## 16. The tests (`tests/`)
 
-The suite has **160 tests** across 21 files, one test module per source module, and
+The suite has **164 tests** across 21 files, one test module per source module, and
 it runs in a few seconds. `conftest.py` provides a `deck_copy` fixture: a writable
 copy of the sample deck in a temp directory, so tests never mutate the fixture
 itself.
@@ -1311,7 +1320,9 @@ Coverage by area:
 - **Config and logging**: `test_config`, `test_state`, `test_log`.
 - **The web layer** has the most tests: `test_api_app`, plus `test_api_jobs` and
   `test_api_schemas` (including the structured `/api/graph`, the template and
-  rendered prompt endpoints, the `choices` validation paths, the guard that the large
+  rendered prompt endpoints, the `choices` validation paths, the sample-deck picker
+  (the `/api/sample-decks` listing, deck selection, and the unknown-deck guard), the
+  guard that the large
   rendered prompt never enters `JobView`, and the state inspector: the
   `/api/jobs/{id}/state/{node}` endpoint, the `state_nodes` poll field, and the
   capture of per-node deltas in `run_job`, including the partial set left after a
@@ -1323,12 +1334,17 @@ Coverage by area:
   binary is present (`pytest -m "not integration"` skips them). On a machine with
   Typst 0.14+ installed they run and pass too.
 
-The sample deck (`tests/fixtures/sample_deck/`) is a minimal but representative
-Beamer deck: `main.tex` sets up the title and `\input`s `intro.tex`, which has
-bullet-list slides, an equation slide (the quadratic formula and `E = mc^2`), and a
-slide with an included `logo.png`. It deliberately ships with leftover build files
-(`main.aux`, `main.log`, `main.nav`, ...) so the cleanup step has something real to
-remove.
+The fixtures live under `tests/fixtures/sample_decks/`, one subdirectory per deck.
+`deck1` is a minimal but representative Beamer deck: `main.tex` sets up the title and
+`\input`s `intro.tex`, which has bullet-list slides, an equation slide (the quadratic
+formula and `E = mc^2`), and a slide with an included `logo.png`. `deck2` adds a
+bibliography path: `biblatex` with `\addbibresource`, a `references.bib`, a `refs.tex`
+references frame, and a richer math frame (numbered and unnumbered equations, a
+cross-reference, and `\textcite`/`\parencite`/`\footcite` citations). Both decks
+deliberately ship with leftover build files (`main.aux`, `main.log`, `main.nav`, ...)
+so the cleanup step has something real to remove. The testing UI lists each
+subdirectory in its sample-deck dropdown, so dropping in a new `deckN/` folder makes
+it selectable with no code change.
 
 > **The test philosophy in one line:** the fake client means the entire pipeline can
 > be tested end-to-end without ever calling a paid AI or touching the network. The
@@ -1376,15 +1392,16 @@ uv sync
 # run the test suite (integration tests skip if typst is absent)
 uv run pytest
 
-# convert the sample deck as a library call
-uv run python -c "from b2t.app import convert_deck; convert_deck('tests/fixtures/sample_deck', 'out')"
+# convert a bundled sample deck as a library call
+uv run python -c "from b2t.app import convert_deck; convert_deck('tests/fixtures/sample_decks/deck1', 'out')"
 
 # or start the web UI, then open http://127.0.0.1:8000
 uv run uvicorn b2t.api.app:app --reload
 ```
 
-In the web UI you can pick a deck folder (or click "Use sample deck"), and for each
-AI node choose a model and a prompt version and preview the exact prompt. Tick "use
+In the web UI you can pick a deck folder (or choose a bundled sample deck from the
+dropdown and click "Use sample deck"), and for each AI node choose a model and a
+prompt version and preview the exact prompt. Tick "use
 fake converter (offline)" to exercise the pipeline without calling OpenRouter.
 
 For real (non-fake) conversions, create a `.env` file in the repo root with

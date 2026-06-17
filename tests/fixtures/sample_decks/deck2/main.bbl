@@ -1,0 +1,105 @@
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 3.3 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated by
+% biber as required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+
+\refsection{0}
+  \datalist[entry]{nyt/global//global/global/global}
+    \entry{einstein1935can}{article}{}{}
+      \name{author}{3}{}{%
+        {{un=0,uniquepart=base,hash=3ebf53e52a3ce84f0ffb8553200a6a63}{%
+           family={Einstein},
+           familyi={E\bibinitperiod},
+           given={Albert},
+           giveni={A\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=19dc919856626ef90dab285f889c3b78}{%
+           family={Podolsky},
+           familyi={P\bibinitperiod},
+           given={Boris},
+           giveni={B\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=fc8bb495c63cdab3ba6923db2097e4c7}{%
+           family={Rosen},
+           familyi={R\bibinitperiod},
+           given={Nathan},
+           giveni={N\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {APS}%
+      }
+      \strng{namehash}{d7a7dfe41768036d77a53afecb936f4e}
+      \strng{fullhash}{d7a7dfe41768036d77a53afecb936f4e}
+      \strng{fullhashraw}{d7a7dfe41768036d77a53afecb936f4e}
+      \strng{bibnamehash}{d7a7dfe41768036d77a53afecb936f4e}
+      \strng{authorbibnamehash}{d7a7dfe41768036d77a53afecb936f4e}
+      \strng{authornamehash}{d7a7dfe41768036d77a53afecb936f4e}
+      \strng{authorfullhash}{d7a7dfe41768036d77a53afecb936f4e}
+      \strng{authorfullhashraw}{d7a7dfe41768036d77a53afecb936f4e}
+      \field{sortinit}{E}
+      \field{sortinithash}{8da8a182d344d5b9047633dfc0cc9131}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Physical review}
+      \field{number}{10}
+      \field{title}{{Can Quantum-Mechanical Description of Physical Reality Be Considered Complete?}}
+      \field{volume}{47}
+      \field{year}{1935}
+      \field{pages}{777}
+      \range{pages}{1}
+    \endentry
+    \entry{hawking1975particle}{article}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=906302c30c766570fe1df9446c425436}{%
+           family={Hawking},
+           familyi={H\bibinitperiod},
+           given={Stephen\bibnamedelima W},
+           giveni={S\bibinitperiod\bibinitdelim W\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {Springer}%
+      }
+      \strng{namehash}{906302c30c766570fe1df9446c425436}
+      \strng{fullhash}{906302c30c766570fe1df9446c425436}
+      \strng{fullhashraw}{906302c30c766570fe1df9446c425436}
+      \strng{bibnamehash}{906302c30c766570fe1df9446c425436}
+      \strng{authorbibnamehash}{906302c30c766570fe1df9446c425436}
+      \strng{authornamehash}{906302c30c766570fe1df9446c425436}
+      \strng{authorfullhash}{906302c30c766570fe1df9446c425436}
+      \strng{authorfullhashraw}{906302c30c766570fe1df9446c425436}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Communications in mathematical physics}
+      \field{number}{3}
+      \field{title}{Particle creation by black holes}
+      \field{volume}{43}
+      \field{year}{1975}
+      \field{pages}{199\bibrangedash 220}
+      \range{pages}{22}
+    \endentry
+  \enddatalist
+\endrefsection
+\endinput
+

@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from b2t.api.app import _safe_target, create_app
 from b2t.typst_runner import typst_available
 
-SAMPLE_DECK = Path(__file__).parent / "fixtures" / "sample_deck"
+SAMPLE_DECK = Path(__file__).parent / "fixtures" / "sample_decks" / "deck1"
 TERMINAL = {"succeeded", "compile_failed", "failed"}
 
 
@@ -76,6 +76,32 @@ def test_sample_job_runs_and_exposes_typ():
         assert body["status"] == "succeeded"
         assert body["has_pdf"] is True
         assert client.get(f"/api/jobs/{job_id}/pdf").status_code == 200
+
+
+def test_sample_decks_endpoint_lists_decks():
+    body = _client().get("/api/sample-decks").json()
+    assert "deck1" in body["decks"]
+    assert "deck2" in body["decks"]
+    assert body["decks"] == sorted(body["decks"])
+
+
+def test_sample_job_selects_requested_deck():
+    client = _client()
+    res = client.post("/api/jobs/sample", data={"use_fake": "true", "deck": "deck2"})
+    assert res.status_code == 200
+    body = _wait_terminal(client, res.json()["job_id"])
+    # deck2 includes a references frame (refs.tex); deck1 does not.
+    assert "refs.tex" in body["included_tex"]
+
+
+def test_sample_job_unknown_deck_returns_400():
+    res = _client().post("/api/jobs/sample", data={"use_fake": "true", "deck": "nope"})
+    assert res.status_code == 400
+
+
+def test_index_has_sample_deck_select():
+    text = _client().get("/").text
+    assert 'id="sample-deck"' in text
 
 
 def test_folder_upload_reconstructs_and_runs():

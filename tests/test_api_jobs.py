@@ -5,7 +5,7 @@ from b2t.api.state_view import NodeDelta
 from b2t.llm import FakeClient
 from b2t.typst_runner import typst_available
 
-SAMPLE_DECK = Path(__file__).parent / "fixtures" / "sample_deck"
+SAMPLE_DECK = Path(__file__).parent / "fixtures" / "sample_decks" / "deck1"
 
 
 def test_run_job_reaches_terminal(tmp_path):

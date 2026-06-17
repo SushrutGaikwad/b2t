@@ -15,7 +15,7 @@ def _state(**kwargs) -> PipelineState:
     return PipelineState(**base)
 
 
-SAMPLE_DECK = Path(__file__).parent / "fixtures" / "sample_deck"
+SAMPLE_DECK = Path(__file__).parent / "fixtures" / "sample_decks" / "deck1"
 
 
 def test_copy_input_copies_deck(tmp_path):

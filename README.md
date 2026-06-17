@@ -128,7 +128,7 @@ CLI is installed.
 ## Run (v0)
 
 ```bash
-uv run python -c "from b2t.app import convert_deck; convert_deck('tests/fixtures/sample_deck', 'out')"
+uv run python -c "from b2t.app import convert_deck; convert_deck('tests/fixtures/sample_decks/deck1', 'out')"
 ```
 
 Output is written to `out/` (`main.typ`, copied images, and `main.pdf` on
@@ -147,8 +147,9 @@ A thin browser UI for converting a deck folder and inspecting the result.
 uv run uvicorn b2t.api.app:app --reload
 ```
 
-Open http://127.0.0.1:8000. Click "Use sample deck" for a one-click run, or
-pick a deck folder with the folder chooser. For each LLM node you can choose a
+Open http://127.0.0.1:8000. Pick a bundled sample deck from the dropdown and
+click "Use sample deck" for a one-click run, or pick your own deck folder with
+the folder chooser. For each LLM node you can choose a
 model and a prompt version; tick "use fake converter (offline)" to exercise the
 pipeline without calling OpenRouter. The page shows per-node progress, the
 model and prompt version each node used, the generated `main.typ` in an editor

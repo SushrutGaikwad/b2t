@@ -4,7 +4,7 @@ from b2t.graph import build_graph
 from b2t.llm import FakeClient
 from b2t.typst_runner import typst_available
 
-SAMPLE_DECK = Path(__file__).parent / "fixtures" / "sample_deck"
+SAMPLE_DECK = Path(__file__).parent / "fixtures" / "sample_decks" / "deck1"
 
 VALID_TYPST = "#set page(width: 12cm, height: 6cm)\n= Hello\n\nWorld\n"
 

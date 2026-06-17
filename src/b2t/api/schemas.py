@@ -67,6 +67,12 @@ class ModelsView(BaseModel):
     default: str
 
 
+class SampleDecksView(BaseModel):
+    """The bundled sample deck names, for the deck picker."""
+
+    decks: list[str]
+
+
 class GraphNode(BaseModel):
     """One pipeline node: its name and whether it is an LLM node."""
 

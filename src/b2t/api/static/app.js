@@ -272,6 +272,23 @@ function buildPreview(nodeName, getVersion) {
   };
 }
 
+// ----- sample deck picker -----
+async function loadSampleDecks() {
+  const sel = $("sample-deck");
+  try {
+    const decks = (await (await fetch("/api/sample-decks")).json()).decks;
+    sel.innerHTML = "";
+    for (const name of decks) {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      sel.appendChild(opt);
+    }
+  } catch (e) {
+    // leave empty; the sample button posts no deck and the server defaults
+  }
+}
+
 function collectChoices() {
   const choices = {};
   for (const sel of document.querySelectorAll(".model-select")) {
@@ -356,7 +373,9 @@ $("run").addEventListener("click", () => {
 });
 
 $("run-sample").addEventListener("click", () => {
-  start("/api/jobs/sample", commonFields(new FormData()));
+  const fd = commonFields(new FormData());
+  fd.append("deck", $("sample-deck").value);
+  start("/api/jobs/sample", fd);
 });
 
 $("save").addEventListener("click", async () => {
@@ -489,3 +508,4 @@ async function inspectNode(node) {
 
 loadGraph();
 loadLLMNodes();
+loadSampleDecks();
