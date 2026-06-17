@@ -143,6 +143,23 @@ class LLMNodesView(BaseModel):
     nodes: list[LLMNodeView]
 
 
+class ReviewView(BaseModel):
+    """The frame currently awaiting review."""
+
+    frame_index: int
+    total: int
+    candidate: str
+    preview_ok: bool
+    preview_error: str | None = None
+
+
+class ReviewDecision(BaseModel):
+    """A reviewer's decision: approve, or regenerate with optional feedback."""
+
+    action: str
+    feedback: str | None = None
+
+
 def to_view(job: JobRecord) -> JobView:
     """Project a JobRecord onto the public JobView.
 

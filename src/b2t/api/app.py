@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
 
-from b2t.api.jobs import EXECUTOR, JobStore, run_job
+from b2t.api.jobs import EXECUTOR, JobStore, resume_job, run_job
 from b2t.api.schemas import (
     GraphEdge,
     GraphNode,
@@ -23,6 +23,8 @@ from b2t.api.schemas import (
     NodeStateView,
     PromptContentView,
     RenderedPromptView,
+    ReviewDecision,
+    ReviewView,
     SampleDecksView,
     SaveRequest,
     SaveResult,
@@ -162,6 +164,7 @@ def create_app(store: JobStore | None = None) -> FastAPI:
         files: list[UploadFile] = File([]),
         use_fake: bool = Form(False),
         choices: str = Form(""),
+        hitl: bool = Form(False),
     ):
         """Reconstruct an uploaded deck folder and start a conversion job."""
         if not files:
@@ -170,12 +173,15 @@ def create_app(store: JobStore | None = None) -> FastAPI:
         root = Path(tempfile.mkdtemp(prefix="b2t_upload_"))
         _reconstruct(files, root)
         output_dir = root.parent / (root.name + "_out")
-        job = jobs.create(input_dir=root, output_dir=output_dir)
+        job = jobs.create(
+            input_dir=root, output_dir=output_dir,
+            hitl=hitl, use_fake=use_fake, choices=parsed,
+        )
         logger.info("job {} created for upload ({} files)", job.id, len(files))
         EXECUTOR.submit(
             run_job, jobs, job.id, root, output_dir,
             lambda: _make_client(use_fake),
-            parsed,
+            parsed, hitl,
         )
         return JobCreated(job_id=job.id, status=job.status)
 
@@ -189,6 +195,7 @@ def create_app(store: JobStore | None = None) -> FastAPI:
         use_fake: bool = Form(False),
         choices: str = Form(""),
         deck: str = Form(""),
+        hitl: bool = Form(False),
     ):
         """Start a conversion job on a chosen bundled sample deck.
 
@@ -202,12 +209,15 @@ def create_app(store: JobStore | None = None) -> FastAPI:
             raise HTTPException(status_code=400, detail=f"unknown sample deck: {deck}")
         input_dir = SAMPLE_DECKS_DIR / name
         output_dir = Path(tempfile.mkdtemp(prefix="b2t_sample_")) / "out"
-        job = jobs.create(input_dir=input_dir, output_dir=output_dir)
+        job = jobs.create(
+            input_dir=input_dir, output_dir=output_dir,
+            hitl=hitl, use_fake=use_fake, choices=parsed,
+        )
         logger.info("job {} created for sample deck {}", job.id, name)
         EXECUTOR.submit(
             run_job, jobs, job.id, input_dir, output_dir,
             lambda: _make_client(use_fake),
-            parsed,
+            parsed, hitl,
         )
         return JobCreated(job_id=job.id, status=job.status)
 
@@ -262,6 +272,42 @@ def create_app(store: JobStore | None = None) -> FastAPI:
         except KeyError:
             raise HTTPException(status_code=404, detail="node has not run")
         return NodeStateView(node=node, changed=changed, state=snapshot)
+
+    @app.get("/api/jobs/{job_id}/review", response_model=ReviewView)
+    def get_review(job_id: str):
+        """Return the frame currently awaiting review. 404 if none."""
+        job = jobs.get(job_id)
+        if job is None or job.status != "awaiting_review" or job.review is None:
+            raise HTTPException(status_code=404, detail="no frame awaiting review")
+        return ReviewView(**job.review)
+
+    @app.get("/api/jobs/{job_id}/preview.pdf")
+    def get_preview(job_id: str):
+        """Return the deck-so-far preview PDF. 404 if not produced."""
+        job = jobs.get(job_id)
+        if job is None or job.output_dir is None:
+            raise HTTPException(status_code=404, detail="no preview")
+        pdf = Path(job.output_dir) / "preview.pdf"
+        if not pdf.exists():
+            raise HTTPException(status_code=404, detail="no preview")
+        return FileResponse(pdf, media_type="application/pdf")
+
+    @app.post("/api/jobs/{job_id}/review", response_model=JobCreated)
+    def submit_review(job_id: str, decision: ReviewDecision):
+        """Resume a paused review with the reviewer's decision."""
+        job = jobs.get(job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail="unknown job")
+        if job.status != "awaiting_review":
+            raise HTTPException(status_code=400, detail="job is not awaiting review")
+        if decision.action not in {"approve", "regenerate"}:
+            raise HTTPException(status_code=400, detail="invalid action")
+        jobs.update(job_id, status="running")
+        EXECUTOR.submit(
+            resume_job, jobs, job_id, decision.action, decision.feedback,
+            lambda: _make_client(job.use_fake),
+        )
+        return JobCreated(job_id=job_id, status="running")
 
     @app.post("/api/jobs/{job_id}/save", response_model=SaveResult)
     def save_job(job_id: str, req: SaveRequest):

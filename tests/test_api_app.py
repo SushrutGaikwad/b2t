@@ -403,3 +403,49 @@ def test_node_state_unknown_node_returns_404():
 def test_index_has_state_inspector_container():
     text = _client().get("/").text
     assert '<div id="state-inspector"' in text
+
+
+def _start_hitl(client, deck="deck1"):
+    res = client.post(
+        "/api/jobs/sample", data={"use_fake": "true", "hitl": "true", "deck": deck}
+    )
+    assert res.status_code == 200
+    job_id = res.json()["job_id"]
+    deadline = time.monotonic() + 30
+    while time.monotonic() < deadline:
+        body = client.get(f"/api/jobs/{job_id}").json()
+        if body["status"] == "awaiting_review":
+            return job_id
+        time.sleep(0.1)
+    raise AssertionError(f"job never awaited review: {body}")
+
+
+def test_hitl_review_payload_and_approve_flow():
+    client = _client()
+    job_id = _start_hitl(client)
+    review = client.get(f"/api/jobs/{job_id}/review").json()
+    assert review["frame_index"] == 0
+    assert review["total"] == 4
+    assert "==" in review["candidate"]
+    res = client.post(f"/api/jobs/{job_id}/review", json={"action": "approve"})
+    assert res.status_code == 200
+
+
+def test_hitl_review_rejects_bad_action():
+    client = _client()
+    job_id = _start_hitl(client)
+    res = client.post(f"/api/jobs/{job_id}/review", json={"action": "nope"})
+    assert res.status_code == 400
+
+
+def test_review_on_non_awaiting_job_returns_400():
+    client = _client()
+    job_id = _run_sample(client)  # non-HITL, terminal
+    res = client.post(f"/api/jobs/{job_id}/review", json={"action": "approve"})
+    assert res.status_code == 400
+
+
+def test_review_endpoint_404_when_not_awaiting():
+    client = _client()
+    job_id = _run_sample(client)
+    assert client.get(f"/api/jobs/{job_id}/review").status_code == 404
