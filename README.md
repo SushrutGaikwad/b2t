@@ -82,9 +82,11 @@ automatically and the pipeline behaves exactly as before.
    the Typst math guide, and any reviewer feedback as context. A wrapping
    markdown code fence is stripped deterministically.
 8. `preview` (deterministic): With review enabled, assembles the deck so far
-   (header plus already-approved frames plus the candidate, no bibliography) and
-   compiles it to `preview.pdf` so the reviewer sees the new frame in context. A
-   no-op when review is off.
+   (header plus already-approved frames plus the candidate, with the bibliography
+   and thank-you slide when the deck has a `.bib` so citation frames resolve),
+   normalizes image paths, copies the images and `.bib` next to it, and compiles
+   it to `preview.pdf` so the reviewer sees the new frame in context. A no-op
+   when review is off.
 9. `review`: With review off, commits the candidate and advances. With review
    on, pauses the graph (a LangGraph interrupt) until the reviewer approves (the
    frame is committed) or regenerates with feedback (the same frame is redone).

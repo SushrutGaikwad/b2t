@@ -27,7 +27,10 @@ In scope:
 - A LangGraph `interrupt()` in the `review` node, an in-memory checkpointer, and
   a thread id per job.
 - A deck-so-far preview compiled per frame (header + approved frames + the
-  candidate; no bibliography or thank-you slide until the final deck).
+  candidate). The preview includes the bibliography and thank-you when the deck
+  has a `.bib`, and copies the images and `.bib`, so a frame that references an
+  image or a citation compiles during review. (This revises the initial
+  "no bibliography in previews" idea, which broke citation frames.)
 - `run_job` split into an initial run and a `resume_job`, plus three API
   endpoints to fetch the review payload, fetch the preview PDF, and submit a
   decision.
@@ -106,9 +109,12 @@ If `state.hitl_enabled` is `False`, returns `{}` (no preview work). Otherwise:
 
 1. Builds `converted = state.converted_frames + [state.candidate]` and
    `frames = state.frames[: state.frame_index + 1]`.
-2. Calls `assemble(meta, aspect_ratio, has_toc, frames, converted, None)` (no
-   bibliography mid-review).
-3. Writes `output_dir/preview.typ` and runs `compile_typst` on it.
+2. Calls `assemble(meta, aspect_ratio, has_toc, frames, converted, bib_name)`
+   where `bib_name` is the detected `.bib` filename or `None`, then
+   `fix_image_paths` on the result.
+3. Copies the images and the `.bib` into `output_dir`, writes
+   `output_dir/preview.typ`, and runs `compile_typst` on it, so a frame that
+   references an image or a citation resolves during review.
 4. Returns `preview_path`, `preview_pdf` (or `None`), and `preview_error`.
 
 ### 6.3 `review` node (`nodes/review.py`)

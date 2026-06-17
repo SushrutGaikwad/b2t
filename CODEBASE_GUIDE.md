@@ -760,10 +760,14 @@ parameter (`client`), which is why `build_graph` binds it with `partial`. For
 ### 9.8 `preview.py` - `preview_node(state)`
 
 With review enabled, assembles the deck so far (header plus already-approved
-`converted_frames` plus the `candidate`, with no bibliography) via
-`typst_scaffold.assemble`, writes `output_dir/preview.typ`, and compiles it,
-returning `preview_path`, `preview_pdf`, and `preview_error`. A no-op (returns
-`{}`) when `hitl_enabled` is False.
+`converted_frames` plus the `candidate`, including the bibliography and thank-you
+when the deck has a `.bib`) via `typst_scaffold.assemble`, normalizes image paths
+with `fix_image_paths`, copies the images and the `.bib` into `output_dir`, writes
+`output_dir/preview.typ`, and compiles it, returning `preview_path`,
+`preview_pdf`, and `preview_error`. The image/`.bib` copy and path normalization
+mirror `write_output` (which runs only after the loop) so a frame referencing an
+image or a citation compiles during review. A no-op (returns `{}`) when
+`hitl_enabled` is False.
 
 ### 9.9 `review.py` - `review_node(state)`
 
