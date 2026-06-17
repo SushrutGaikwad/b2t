@@ -1,6 +1,9 @@
+import shutil
+
 from loguru import logger
 
 from b2t.state import PipelineState
+from b2t.typst_images import fix_image_paths
 from b2t.typst_runner import compile_typst
 from b2t.typst_scaffold import assemble
 
@@ -9,7 +12,10 @@ def preview_node(state: PipelineState) -> dict:
     """Compile a preview of the deck so far, for human review (HITL only).
 
     Assembles the header, already-approved frames, and the current candidate
-    (no bibliography or thank-you slide) and compiles it. A no-op when review is
+    (no bibliography or thank-you slide) and compiles it. Image references are
+    normalized and the image files copied alongside preview.typ, the same as the
+    final write_output, so a frame referencing an image compiles during review
+    (write_output only runs after the whole loop). A no-op when review is
     disabled, so the library and offline paths skip the extra compile.
 
     Returns:
@@ -23,7 +29,10 @@ def preview_node(state: PipelineState) -> dict:
     source = assemble(
         state.meta, state.aspect_ratio, state.has_toc, frames, converted, None
     )
+    source = fix_image_paths(source, state.image_files)
     state.output_dir.mkdir(parents=True, exist_ok=True)
+    for image in state.image_files:
+        shutil.copy2(image, state.output_dir / image.name)
     preview_path = state.output_dir / "preview.typ"
     preview_path.write_text(source, encoding="utf-8")
     result = compile_typst(preview_path)

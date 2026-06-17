@@ -219,6 +219,28 @@ def test_preview_node_assembles_without_bibliography(tmp_path):
     assert "#bibliography" not in text  # previews never show the bibliography
 
 
+def test_preview_node_normalizes_image_paths_and_copies_images(tmp_path):
+    from b2t.nodes.preview import preview_node
+    from b2t.state import DeckMeta, FrameUnit
+
+    img = tmp_path / "logo.png"
+    img.write_bytes(b"not-a-real-png")
+    state = _state(
+        output_dir=tmp_path / "out",
+        hitl_enabled=True,
+        meta=DeckMeta(title="T"),
+        frames=[FrameUnit(raw="", section=None)],
+        frame_index=0,
+        converted_frames=[],
+        candidate='#figure(image("logo", width: 30%))',
+        image_files=[img],
+    )
+    preview_node(state)
+    text = (tmp_path / "out" / "preview.typ").read_text(encoding="utf-8")
+    assert 'image("logo.png"' in text  # extensionless ref normalized for the preview
+    assert (tmp_path / "out" / "logo.png").exists()  # image copied next to preview.typ
+
+
 def test_review_node_auto_approves_when_hitl_disabled():
     from b2t.nodes.review import review_node
     from b2t.state import FrameUnit
