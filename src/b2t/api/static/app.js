@@ -9,6 +9,8 @@ let llmNodes = [];       // from /api/llm-nodes
 let models = [];         // from /api/models
 let stateNodes = [];     // node names that have a captured snapshot
 let shownReviewKey = null; // the review payload currently rendered, to avoid reloading the preview each poll
+let reviewBusy = false;    // a decision was submitted; show the running overlay until the next pause
+let awaitingResume = false; // the review POST is in flight; hold the overlay until the server flips status
 
 if (window.CodeMirror) {
   CodeMirror.defineSimpleMode("typst", {
@@ -347,10 +349,33 @@ async function poll(id) {
   highlightGraph(job.current_node, job.status);
   stateNodes = job.state_nodes || [];
   markInspectable();
-  if (job.status === "awaiting_review") renderReview(id);
-  else { $("review").hidden = true; shownReviewKey = null; }
+  updateReview(id, job);
   if (TERMINAL.includes(job.status)) finish(id, job);
   else setTimeout(() => poll(id), 1000);
+}
+
+// Drive the review panel from the job status. While a decision is being
+// submitted (awaitingResume) or the graph is running mid-review (reviewBusy),
+// the running overlay stays up instead of the panel vanishing; the overlay
+// clears on the next pause or when the run ends.
+function updateReview(id, job) {
+  if (TERMINAL.includes(job.status)) {
+    reviewBusy = false;
+    $("review").hidden = true;
+    $("review-busy").hidden = true;
+    shownReviewKey = null;
+    return;
+  }
+  if (reviewBusy && awaitingResume) return;   // POST in flight; keep the overlay up
+  if (job.status === "awaiting_review") {
+    reviewBusy = false;
+    $("review-busy").hidden = true;
+    renderReview(id);
+    return;
+  }
+  if (reviewBusy) return;                      // running mid-review; keep the overlay up
+  $("review").hidden = true;                   // fresh or non-review run; no panel yet
+  shownReviewKey = null;
 }
 
 // ----- per-frame review panel -----
@@ -373,17 +398,29 @@ async function renderReview(jobId) {
   $("review").hidden = false;
 }
 
-// Post the decision; the live poll loop re-renders when the run pauses again.
+// Post the decision and show the running overlay over the panel (instead of
+// hiding it) until the run pauses again or finishes. awaitingResume holds the
+// overlay across the brief window before the server flips the status off
+// awaiting_review, so a poll cannot momentarily clear it.
 async function submitReview(action) {
   if (!currentJobId) return;
   const feedback = $("review-feedback").value;
-  $("review").hidden = true;
-  await fetch(`/api/jobs/${currentJobId}/review`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action, feedback: feedback || null }),
-  });
+  reviewBusy = true;
+  awaitingResume = true;
+  $("review-busy-text").textContent = action === "regenerate"
+    ? "Regenerating this frame..."
+    : "Approving and converting the next frame...";
+  $("review-busy").hidden = false;
   $("review-feedback").value = "";
+  try {
+    await fetch(`/api/jobs/${currentJobId}/review`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, feedback: feedback || null }),
+    });
+  } finally {
+    awaitingResume = false;
+  }
 }
 
 $("review-approve").addEventListener("click", () => submitReview("approve"));
@@ -397,7 +434,10 @@ async function start(url, fd) {
   $("error").textContent = "(none)";
   $("pdf").src = "about:blank";
   $("review").hidden = true;
+  $("review-busy").hidden = true;
   shownReviewKey = null;
+  reviewBusy = false;
+  awaitingResume = false;
   hideInspector();
   stateNodes = [];
   markInspectable();

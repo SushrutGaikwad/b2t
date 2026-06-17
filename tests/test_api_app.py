@@ -464,3 +464,4 @@ def test_index_has_review_panel_and_hitl_toggle():
     assert 'id="review-approve"' in text
     assert 'id="review-regenerate"' in text
     assert 'id="review-feedback"' in text
+    assert 'id="review-busy"' in text
