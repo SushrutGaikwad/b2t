@@ -19,6 +19,7 @@
       </label>
       <div class="options">
         <label><input type="checkbox" id="use-fake" /> use fake converter (offline)</label>
+        <label><input type="checkbox" id="hitl" /> review each frame</label>
       </div>
       <div class="actions">
         <button id="run">Convert folder</button>
@@ -38,6 +39,20 @@
       <div id="llm-nodes"></div>
       <div id="provenance"></div>
     </section>
+
+    <div id="review" hidden>
+      <h2>Review frame <span id="review-counter"></span></h2>
+      <p id="review-status"></p>
+      <div class="review-body">
+        <textarea id="review-candidate" readonly rows="14"></textarea>
+        <iframe id="review-preview" title="frame preview"></iframe>
+      </div>
+      <textarea id="review-feedback" placeholder="feedback for regeneration (optional)" rows="3"></textarea>
+      <div class="review-actions">
+        <button id="review-approve" type="button">Approve</button>
+        <button id="review-regenerate" type="button">Regenerate</button>
+      </div>
+    </div>
 
     <section class="output">
       <h2>Generated main.typ</h2>

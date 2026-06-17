@@ -302,6 +302,7 @@ function collectChoices() {
 
 function commonFields(fd) {
   fd.append("use_fake", $("use-fake").checked ? "true" : "false");
+  fd.append("hitl", $("hitl").checked ? "true" : "false");
   fd.append("choices", JSON.stringify(collectChoices()));
   return fd;
 }
@@ -345,9 +346,41 @@ async function poll(id) {
   highlightGraph(job.current_node, job.status);
   stateNodes = job.state_nodes || [];
   markInspectable();
+  if (job.status === "awaiting_review") renderReview(id);
+  else $("review").hidden = true;
   if (TERMINAL.includes(job.status)) finish(id, job);
   else setTimeout(() => poll(id), 1000);
 }
+
+// ----- per-frame review panel -----
+async function renderReview(jobId) {
+  const r = await fetch(`/api/jobs/${jobId}/review`);
+  if (!r.ok) { $("review").hidden = true; return; }
+  const review = await r.json();
+  $("review-counter").textContent = `${review.frame_index + 1} of ${review.total}`;
+  $("review-candidate").value = review.candidate;
+  $("review-status").textContent = review.preview_ok
+    ? "" : `preview did not compile: ${review.preview_error || ""}`;
+  $("review-preview").src = review.preview_ok
+    ? `/api/jobs/${jobId}/preview.pdf?ts=${Date.now()}` : "about:blank";
+  $("review").hidden = false;
+}
+
+// Post the decision; the live poll loop re-renders when the run pauses again.
+async function submitReview(action) {
+  if (!currentJobId) return;
+  const feedback = $("review-feedback").value;
+  $("review").hidden = true;
+  await fetch(`/api/jobs/${currentJobId}/review`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action, feedback: feedback || null }),
+  });
+  $("review-feedback").value = "";
+}
+
+$("review-approve").addEventListener("click", () => submitReview("approve"));
+$("review-regenerate").addEventListener("click", () => submitReview("regenerate"));
 
 async function start(url, fd) {
   setBusy(true);
