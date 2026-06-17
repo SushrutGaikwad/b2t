@@ -8,6 +8,7 @@ let nodeOrder = [];      // pipeline node order from /api/graph
 let llmNodes = [];       // from /api/llm-nodes
 let models = [];         // from /api/models
 let stateNodes = [];     // node names that have a captured snapshot
+let shownReviewKey = null; // the review payload currently rendered, to avoid reloading the preview each poll
 
 if (window.CodeMirror) {
   CodeMirror.defineSimpleMode("typst", {
@@ -347,16 +348,22 @@ async function poll(id) {
   stateNodes = job.state_nodes || [];
   markInspectable();
   if (job.status === "awaiting_review") renderReview(id);
-  else $("review").hidden = true;
+  else { $("review").hidden = true; shownReviewKey = null; }
   if (TERMINAL.includes(job.status)) finish(id, job);
   else setTimeout(() => poll(id), 1000);
 }
 
 // ----- per-frame review panel -----
+// Re-rendered only when the review payload changes (a new frame on approve, a new
+// candidate on regenerate). Otherwise a repeat poll would re-assign the iframe src
+// with a fresh cache-buster every second and the preview would reload (blink).
 async function renderReview(jobId) {
   const r = await fetch(`/api/jobs/${jobId}/review`);
-  if (!r.ok) { $("review").hidden = true; return; }
+  if (!r.ok) { $("review").hidden = true; shownReviewKey = null; return; }
   const review = await r.json();
+  const key = JSON.stringify(review);
+  if (key === shownReviewKey) return;
+  shownReviewKey = key;
   $("review-counter").textContent = `${review.frame_index + 1} of ${review.total}`;
   $("review-candidate").value = review.candidate;
   $("review-status").textContent = review.preview_ok
@@ -389,6 +396,8 @@ async function start(url, fd) {
   setSource("");
   $("error").textContent = "(none)";
   $("pdf").src = "about:blank";
+  $("review").hidden = true;
+  shownReviewKey = null;
   hideInspector();
   stateNodes = [];
   markInspectable();
