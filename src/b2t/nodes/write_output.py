@@ -26,5 +26,7 @@ def write_output(state: PipelineState) -> dict:
     typst_path.write_text(typst_source, encoding="utf-8")
     for image in state.image_files:
         shutil.copy2(image, state.output_dir / image.name)
+    if state.bib_file:
+        shutil.copy2(state.bib_file, state.output_dir / state.bib_file.name)
     logger.debug("wrote {} and {} images", typst_path, len(state.image_files))
     return {"typst_path": typst_path, "typst_source": typst_source}

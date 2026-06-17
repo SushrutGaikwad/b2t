@@ -52,14 +52,16 @@ def test_update_mutates_record():
     assert rec.current_node == "flatten"
 
 
-def test_pipeline_nodes_are_the_eight_in_order():
+def test_pipeline_nodes_are_the_ten_in_order():
     assert PIPELINE_NODES == (
         "copy_input",
         "clean_build",
         "detect_main",
         "flatten",
         "strip_overlays",
+        "split_deck",
         "convert",
+        "assemble",
         "write_output",
         "compile",
     )
@@ -90,7 +92,7 @@ def test_run_job_records_llm_runs(tmp_path):
     rec = store.get(job.id)
     assert rec.llm_runs["convert"] == {
         "model": DEFAULT_MODEL,
-        "prompt_version": "v2",
+        "prompt_version": "v3",
     }
 
 
@@ -123,9 +125,14 @@ def test_run_job_captures_node_deltas(tmp_path):
     job = store.create(input_dir=SAMPLE_DECK, output_dir=out)
     run_job(store, job.id, SAMPLE_DECK, out, lambda: FakeClient("= Hi\n"))
     rec = store.get(job.id)
-    assert [d.node for d in rec.node_deltas] == list(PIPELINE_NODES)
+    # convert repeats once per frame, so compare the distinct nodes in order
+    seen = []
+    for d in rec.node_deltas:
+        if d.node not in seen:
+            seen.append(d.node)
+    assert seen == list(PIPELINE_NODES)
     convert = next(d for d in rec.node_deltas if d.node == "convert")
-    assert "typst_source" in convert.changed
+    assert "converted_frames" in convert.changed
     assert "llm_runs" in convert.changed
     assert "llm_rendered" in convert.changed
     assert "input_dir" in rec.seed_state

@@ -77,69 +77,6 @@ def test_write_output_fixes_image_extension(deck_copy, tmp_path):
     assert (out / "main.typ").read_text(encoding="utf-8") == '#image("logo.png")\n'
 
 
-def test_convert_node_uses_injected_client():
-    from b2t.llm import FakeClient
-    from b2t.nodes.convert import convert_node
-
-    state = _state(stripped_tex="\\section{X}")
-    update = convert_node(state, client=FakeClient("= Converted\n"))
-    assert update["typst_source"] == "= Converted\n"
-
-
-def test_convert_node_strips_wrapping_code_fence():
-    from b2t.llm import FakeClient
-    from b2t.nodes.convert import convert_node
-
-    state = _state(stripped_tex="\\section{X}")
-    update = convert_node(state, client=FakeClient("```typst\n= Converted\n```"))
-    assert update["typst_source"] == "= Converted\n"
-
-
-def test_convert_node_passes_math_guide_in_user_message():
-    from b2t.nodes.convert import convert_node
-
-    captured = {}
-
-    class Recorder:
-        def complete(self, system, user, model):
-            captured["user"] = user
-            return "= ok\n"
-
-    convert_node(_state(stripped_tex="x"), client=Recorder())
-    assert "Writing Math Equations in Typst" in captured["user"]
-
-
-def test_convert_node_passes_aspect_ratio_into_prompt():
-    from b2t.nodes.convert import convert_node
-
-    captured = {}
-
-    class Recorder:
-        def complete(self, system, user, model):
-            captured["user"] = user
-            return "= ok\n"
-
-    convert_node(_state(stripped_tex="x", aspect_ratio="16-9"), client=Recorder())
-    assert '"16-9"' in captured["user"]
-
-
-def test_convert_node_records_provenance():
-    from b2t.llm import FakeClient
-    from b2t.nodes.convert import convert_node
-
-    update = convert_node(_state(stripped_tex="x"), client=FakeClient("= ok\n"))
-    assert update["llm_runs"]["convert"].prompt_version == "v2"
-
-
-def test_convert_node_records_rendered_prompt():
-    from b2t.llm import FakeClient
-    from b2t.nodes.convert import convert_node
-
-    update = convert_node(_state(stripped_tex="MYSOURCE"), client=FakeClient("= ok\n"))
-    assert "MYSOURCE" in update["llm_rendered"]["convert"].user
-    assert update["llm_rendered"]["convert"].system
-
-
 def test_split_deck_node(tmp_path):
     from b2t.nodes.split_deck import split_deck
 

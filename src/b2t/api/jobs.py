@@ -17,7 +17,9 @@ PIPELINE_NODES = (
     "detect_main",
     "flatten",
     "strip_overlays",
+    "split_deck",
     "convert",
+    "assemble",
     "write_output",
     "compile",
 )

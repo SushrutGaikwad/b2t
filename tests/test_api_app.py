@@ -284,7 +284,7 @@ def test_real_job_without_key_records_failed(monkeypatch):
 def test_llm_nodes_endpoint_lists_convert_with_versions():
     body = _client().get("/api/llm-nodes").json()
     convert = next(n for n in body["nodes"] if n["node"] == "convert")
-    assert convert["default_version"] == "v2"
+    assert convert["default_version"] == "v3"
     v1 = next(v for v in convert["versions"] if v["id"] == "v1")
     assert v1["label"] == "v1 - simple prompt"
     v2 = next(v for v in convert["versions"] if v["id"] == "v2")
@@ -323,11 +323,11 @@ def test_sample_job_with_valid_choices_runs_and_reports_provenance():
     client = _client()
     res = client.post(
         "/api/jobs/sample",
-        data={"use_fake": "true", "choices": '{"convert": {"prompt_version": "v1"}}'},
+        data={"use_fake": "true", "choices": '{"convert": {"prompt_version": "v3"}}'},
     )
     assert res.status_code == 200
     body = _wait_terminal(client, res.json()["job_id"])
-    assert body["llm_runs"]["convert"]["prompt_version"] == "v1"
+    assert body["llm_runs"]["convert"]["prompt_version"] == "v3"
 
 
 def test_index_has_llm_nodes_container():
@@ -356,8 +356,8 @@ def test_rendered_prompt_available_after_run():
     client = _client()
     job_id = _run_sample(client)
     body = client.get(f"/api/jobs/{job_id}/prompt/convert").json()
-    assert body["prompt_version"] == "v2"
-    assert "You convert LaTeX Beamer" in body["system"]
+    assert body["prompt_version"] == "v3"
+    assert "single LaTeX Beamer frame" in body["system"]
     assert "Reference Touying presentation" in body["user"]
 
 
@@ -376,9 +376,10 @@ def test_node_state_available_after_run():
     job_id = _run_sample(client)
     body = client.get(f"/api/jobs/{job_id}/state/convert").json()
     assert body["node"] == "convert"
-    assert "typst_source" in body["changed"]
-    assert "stripped_tex" in body["state"]
-    assert "typst_source" in body["state"]
+    assert "converted_frames" in body["changed"]
+    assert "frames" in body["state"]
+    asm = client.get(f"/api/jobs/{job_id}/state/assemble").json()
+    assert "typst_source" in asm["changed"]
 
 
 def test_jobview_lists_state_nodes_after_run():

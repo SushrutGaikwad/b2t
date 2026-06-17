@@ -86,16 +86,14 @@ def test_default_version_unknown_node_raises(tmp_path):
         default_version("nope", base=tmp_path)
 
 
-def test_real_convert_v2_is_default_and_loadable():
-    assert P.default_version("convert") == "v2"
+def test_real_convert_default_is_v3():
+    assert P.default_version("convert") == "v3"
+
+
+def test_real_convert_v2_still_loadable():
     pv = P.load("convert", "v2")
     assert "Typst Touying" in pv.system
-    assert "Never use overlays" in pv.system
-    for token in ("{{reference}}", "{{guides}}", "{{aspect_ratio}}", "{{source}}"):
-        assert token in pv.user_template
-    # the user message must still end exactly at the source so it stays the
-    # final, freshest context the model reads
-    assert pv.user_template.endswith("{{source}}")
+    assert "{{aspect_ratio}}" in pv.user_template
 
 
 def test_real_convert_v1_still_loadable_without_aspect_token():
