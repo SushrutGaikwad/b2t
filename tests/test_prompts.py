@@ -109,3 +109,10 @@ def test_real_convert_v3_is_per_frame():
         assert token in pv.user_template
     assert "{{source}}" not in pv.user_template
     assert pv.user_template.rstrip().endswith("{{frame}}")
+
+
+def test_real_convert_v4_is_feedback_aware():
+    pv = P.load("convert", "v4")
+    for token in ("{{reference}}", "{{guides}}", "{{preamble}}", "{{feedback}}", "{{frame}}"):
+        assert token in pv.user_template
+    assert pv.user_template.rstrip().endswith("{{frame}}")
