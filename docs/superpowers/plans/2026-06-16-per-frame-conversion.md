@@ -249,7 +249,7 @@ def test_split_preamble_divides_at_begin_document():
     assert r"\title{A Minimal Sample Deck}" in pre
     assert r"\begin{document}" not in pre
     assert r"\begin{frame}{Motivation}" in body
-    assert r"\title" not in body
+    assert r"\title{" not in body  # \titlepage in body contains \title, so match the brace
 
 
 def test_split_preamble_missing_document_raises():
