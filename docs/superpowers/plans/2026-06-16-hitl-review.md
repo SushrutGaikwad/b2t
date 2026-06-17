@@ -415,7 +415,9 @@ def test_hitl_graph_pauses_then_approves_all(tmp_path):
     cfg = {"configurable": {"thread_id": "t1"}}
     seed = {"input_dir": DECK1, "output_dir": tmp_path / "out", "hitl_enabled": True}
     chunks = list(graph.stream(seed, config=cfg, stream_mode=["updates"]))
-    interrupts = [c["__interrupt__"][0].value for c in chunks if "__interrupt__" in c]
+    interrupts = [
+        chunk["__interrupt__"][0].value for mode, chunk in chunks if "__interrupt__" in chunk
+    ]
     assert interrupts and interrupts[0]["frame_index"] == 0
     assert interrupts[0]["total"] == 4
     for _ in range(4):
