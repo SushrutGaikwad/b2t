@@ -5,6 +5,7 @@ from pathlib import Path
 _INPUT_RE = re.compile(r"\\(?:input|include)\{([^}]+)\}")
 _GRAPHIC_RE = re.compile(r"\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}")
 _IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".pdf", ".eps", ".gif")
+_BIB_RE = re.compile(r"\\(?:addbibresource|bibliography)\{([^}]+)\}")
 
 
 @dataclass
@@ -95,3 +96,27 @@ def parse_includes(main_tex: Path) -> Includes:
 
     walk(main_tex)
     return result
+
+
+def detect_bib_file(text: str, deck_dir: Path) -> Path | None:
+    """Resolve a \\addbibresource/\\bibliography target to an existing .bib file.
+
+    Args:
+        text: LaTeX source to scan (preamble or whole deck).
+        deck_dir: Directory the target is resolved against.
+
+    Returns:
+        The existing .bib path, or None if the deck declares no bibliography.
+
+    Raises:
+        FileNotFoundError: If a bibliography is declared but the file is missing.
+    """
+    match = _BIB_RE.search(text)
+    if match is None:
+        return None
+    path = deck_dir / match.group(1)
+    if path.suffix != ".bib":
+        path = path.with_suffix(".bib")
+    if not path.exists():
+        raise FileNotFoundError(f"bibliography not found: {path}")
+    return path

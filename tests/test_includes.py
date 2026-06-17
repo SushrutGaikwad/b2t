@@ -1,6 +1,7 @@
 import pytest
+from pathlib import Path
 
-from b2t.latex.includes import parse_includes
+from b2t.latex.includes import parse_includes, detect_bib_file
 
 
 def test_collects_tex_and_images_recursively(deck_copy):
@@ -23,3 +24,25 @@ def test_missing_image_raises(tmp_path):
     main.write_text(r"\includegraphics{nope}", encoding="utf-8")
     with pytest.raises(FileNotFoundError):
         parse_includes(main)
+
+
+DECK1 = Path(__file__).parent / "fixtures" / "sample_decks" / "deck1"
+DECK2 = Path(__file__).parent / "fixtures" / "sample_decks" / "deck2"
+
+
+def test_detect_bib_file_found():
+    text = (DECK2 / "main.tex").read_text(encoding="utf-8")
+    bib = detect_bib_file(text, DECK2)
+    assert bib is not None
+    assert bib.name == "references.bib"
+    assert bib.exists()
+
+
+def test_detect_bib_file_absent():
+    text = (DECK1 / "main.tex").read_text(encoding="utf-8")
+    assert detect_bib_file(text, DECK1) is None
+
+
+def test_detect_bib_file_missing_raises(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        detect_bib_file(r"\addbibresource{nope.bib}", tmp_path)
