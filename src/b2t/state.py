@@ -82,6 +82,14 @@ class PipelineState(BaseModel):
     frame_index: int = 0
     converted_frames: list[str] = Field(default_factory=list)
 
+    # human-in-the-loop review
+    hitl_enabled: bool = False
+    candidate: str | None = None
+    feedback: str | None = None
+    preview_path: Path | None = None
+    preview_pdf: Path | None = None
+    preview_error: str | None = None
+
     # per-node model + prompt-version selection (seeded at start) and the
     # provenance of what actually ran
     llm_choices: dict[str, NodeChoice] = Field(default_factory=dict)

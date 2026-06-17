@@ -14,6 +14,16 @@ def test_defaults():
     assert state.compile_error is None
 
 
+def test_hitl_fields_default():
+    s = PipelineState(input_dir=Path("in"), output_dir=Path("out"))
+    assert s.hitl_enabled is False
+    assert s.candidate is None
+    assert s.feedback is None
+    assert s.preview_path is None
+    assert s.preview_pdf is None
+    assert s.preview_error is None
+
+
 def test_partial_update_roundtrip():
     state = PipelineState(input_dir=Path("in"), output_dir=Path("out"))
     updated = state.model_copy(update={"main_tex": Path("in/main.tex")})
