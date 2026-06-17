@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from b2t.state import PipelineState
+from b2t.state import DeckMeta, FrameUnit, PipelineState
 
 
 def test_defaults():
@@ -59,3 +59,23 @@ def test_llm_rendered_coerces_nested_dicts():
     )
     assert state.llm_rendered["convert"].system == "S"
     assert state.llm_rendered["convert"].user == "U"
+
+
+def test_per_frame_fields_default():
+    state = PipelineState(input_dir=Path("in"), output_dir=Path("out"))
+    assert state.preamble is None
+    assert state.meta is None
+    assert state.has_toc is False
+    assert state.bib_file is None
+    assert state.frames == []
+    assert state.frame_index == 0
+    assert state.converted_frames == []
+
+
+def test_deck_meta_and_frame_unit_construct():
+    meta = DeckMeta(title="T", author="A")
+    assert meta.subtitle is None
+    assert meta.date_raw is None
+    unit = FrameUnit(raw=r"\begin{frame}x\end{frame}", section="Intro")
+    assert unit.section == "Intro"
+    assert FrameUnit(raw="y").section is None

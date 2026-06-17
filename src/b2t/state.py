@@ -24,6 +24,28 @@ class RenderedPrompt(BaseModel):
     user: str
 
 
+class DeckMeta(BaseModel):
+    """Title-block metadata parsed from the beamer preamble."""
+
+    title: str | None = None
+    subtitle: str | None = None
+    author: str | None = None
+    institute: str | None = None
+    date_raw: str | None = None
+
+
+class FrameUnit(BaseModel):
+    """One beamer frame plus the section it falls under.
+
+    Attributes:
+        raw: The whole \\begin{frame}...\\end{frame} source.
+        section: The \\section this frame belongs to, or None if before any.
+    """
+
+    raw: str
+    section: str | None = None
+
+
 class PipelineState(BaseModel):
     """Single state object threaded through the conversion graph.
 
@@ -48,6 +70,17 @@ class PipelineState(BaseModel):
     image_files: list[Path] = Field(default_factory=list)
     flattened_tex: str | None = None
     stripped_tex: str | None = None
+
+    # deck structure (split_deck)
+    preamble: str | None = None
+    meta: DeckMeta | None = None
+    has_toc: bool = False
+    bib_file: Path | None = None
+    frames: list[FrameUnit] = Field(default_factory=list)
+
+    # per-frame conversion (the convert cycle)
+    frame_index: int = 0
+    converted_frames: list[str] = Field(default_factory=list)
 
     # per-node model + prompt-version selection (seeded at start) and the
     # provenance of what actually ran
