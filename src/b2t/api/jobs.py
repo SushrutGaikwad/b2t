@@ -5,6 +5,8 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.types import Command
 from loguru import logger
 
 from b2t.api.state_view import NodeDelta, serialize_values
@@ -27,6 +29,10 @@ PIPELINE_NODES = (
 )
 
 EXECUTOR = ThreadPoolExecutor(max_workers=2)
+
+# Shared in-memory checkpointer; each job is a thread keyed by its id. A paused
+# review survives only while this process runs (durable persistence is later).
+CHECKPOINTER = InMemorySaver()
 
 
 @dataclass
@@ -66,6 +72,10 @@ class JobRecord:
     llm_rendered: dict[str, dict] = field(default_factory=dict)
     seed_state: dict = field(default_factory=dict)
     node_deltas: list[NodeDelta] = field(default_factory=list)
+    hitl: bool = False
+    use_fake: bool = False
+    choices: dict = field(default_factory=dict)
+    review: dict | None = None
 
 
 class JobStore:
@@ -113,6 +123,70 @@ class JobStore:
             self._jobs[job_id].node_deltas.append(delta)
 
 
+def _config(job_id: str) -> dict:
+    """The LangGraph thread config that scopes a job's checkpointed state."""
+    return {"configurable": {"thread_id": job_id}}
+
+
+def _drive(store, job_id, graph, stream_input, config) -> tuple[bool, dict | None]:
+    """Stream until an interrupt or the end.
+
+    current_node is driven by debug "task" events; node deltas are recorded from
+    "updates". A node returning nothing streams as a None update, so it is
+    coerced to an empty dict.
+
+    Returns:
+        (paused, review_payload): paused is True if the run hit a review
+        interrupt, in which case review_payload carries the interrupt value.
+    """
+    paused = False
+    payload = None
+    for mode, chunk in graph.stream(stream_input, config=config, stream_mode=["updates", "debug"]):
+        if mode == "debug":
+            if chunk.get("type") == "task":
+                store.update(job_id, current_node=chunk["payload"]["name"])
+            continue
+        if "__interrupt__" in chunk:
+            payload = chunk["__interrupt__"][0].value
+            paused = True
+            continue
+        for node_name, update in chunk.items():
+            update = update or {}
+            store.append_delta(
+                job_id, NodeDelta(node_name, list(update), serialize_values(update))
+            )
+    return paused, payload
+
+
+def _finalize(store, job_id, final: dict) -> None:
+    """Project the final pipeline state onto the job record and set the status."""
+    main_tex = final.get("main_tex")
+    runs = final.get("llm_runs", {})
+    rendered = final.get("llm_rendered", {})
+    store.update(
+        job_id,
+        main_tex=main_tex.name if main_tex else None,
+        included_tex=[p.name for p in final.get("included_tex", [])],
+        images=[p.name for p in final.get("image_files", [])],
+        has_typst=final.get("typst_source") is not None,
+        typst_path=final.get("typst_path"),
+        review=None,
+        llm_runs={
+            node: {"model": run.model, "prompt_version": run.prompt_version}
+            for node, run in runs.items()
+        },
+        llm_rendered={
+            node: {"system": r.system, "user": r.user} for node, r in rendered.items()
+        },
+    )
+    if final.get("compiled"):
+        logger.info("job {} succeeded", job_id)
+        store.update(job_id, status="succeeded", pdf_path=final.get("pdf_path"))
+    else:
+        logger.warning("job {} compile failed", job_id)
+        store.update(job_id, status="compile_failed", error=final.get("compile_error"))
+
+
 def run_job(
     store: JobStore,
     job_id: str,
@@ -120,81 +194,48 @@ def run_job(
     output_dir: Path,
     make_client: Callable[[], LLMClient],
     choices: dict | None = None,
+    hitl: bool = False,
 ) -> None:
-    """Run the conversion graph, updating the job record as each node runs.
+    """Run the conversion graph, pausing for review when hitl is True.
 
-    current_node is driven by debug "task" events, which fire when a node is
-    about to run, so the record names the node that is actually running (not the
-    last one that finished). Final state is accumulated from the "updates".
-
-    The client is constructed inside the failure boundary so a missing API
-    key records the job as failed instead of crashing the request handler.
-
-    Args:
-        store: Registry holding the job's record.
-        job_id: Id of the record to drive.
-        input_dir: Deck directory to convert (treated as read-only).
-        output_dir: Directory for main.typ, images, and the PDF.
-        make_client: Zero-arg factory producing the LLMClient.
-        choices: Optional per-node {model, prompt_version} selection.
-
-    Returns:
-        None. The outcome lands on the job record: succeeded, compile_failed
-        (with the compiler's error), or failed (with the exception text).
+    On a review pause the job becomes awaiting_review with the interrupt payload
+    in `review`; otherwise it finalizes from the checkpointed state. The client
+    is built inside the failure boundary so a missing API key fails the job
+    rather than the request handler.
     """
     seed = {
         "input_dir": input_dir,
         "output_dir": output_dir,
         "llm_choices": choices or {},
+        "hitl_enabled": hitl,
     }
-    state = dict(seed)
     store.update(job_id, status="running", seed_state=serialize_values(seed))
-    logger.info("job {} running: {} -> {}", job_id, input_dir, output_dir)
+    logger.info("job {} running: {} -> {} (hitl={})", job_id, input_dir, output_dir, hitl)
+    config = _config(job_id)
     try:
-        graph = build_graph(make_client())
-        for mode, chunk in graph.stream(seed, stream_mode=["updates", "debug"]):
-            if mode == "debug":
-                if chunk.get("type") == "task":
-                    node = chunk["payload"]["name"]
-                    logger.debug("job {} at node {}", job_id, node)
-                    store.update(job_id, current_node=node)
-            else:
-                for node_name, update in chunk.items():
-                    update = update or {}
-                    state.update(update)
-                    store.append_delta(
-                        job_id,
-                        NodeDelta(node_name, list(update), serialize_values(update)),
-                    )
+        graph = build_graph(make_client(), checkpointer=CHECKPOINTER)
+        paused, payload = _drive(store, job_id, graph, seed, config)
+        if paused:
+            store.update(job_id, status="awaiting_review", review=payload)
+            return
+        _finalize(store, job_id, graph.get_state(config).values)
     except Exception as exc:
         logger.error("job {} failed: {}", job_id, exc)
         store.update(job_id, status="failed", error=str(exc))
-        return
 
-    main_tex = state.get("main_tex")
-    runs = state.get("llm_runs", {})
-    rendered = state.get("llm_rendered", {})
-    store.update(
-        job_id,
-        main_tex=main_tex.name if main_tex else None,
-        included_tex=[p.name for p in state.get("included_tex", [])],
-        images=[p.name for p in state.get("image_files", [])],
-        has_typst=state.get("typst_source") is not None,
-        typst_path=state.get("typst_path"),
-        llm_runs={
-            node: {"model": run.model, "prompt_version": run.prompt_version}
-            for node, run in runs.items()
-        },
-        llm_rendered={
-            node: {"system": r.system, "user": r.user}
-            for node, r in rendered.items()
-        },
-    )
-    if state.get("compiled"):
-        logger.info("job {} succeeded", job_id)
-        store.update(job_id, status="succeeded", pdf_path=state.get("pdf_path"))
-    else:
-        logger.warning("job {} compile failed", job_id)
-        store.update(
-            job_id, status="compile_failed", error=state.get("compile_error")
-        )
+
+def resume_job(store, job_id, action, feedback, make_client) -> None:
+    """Resume a paused review with the reviewer's decision, then pause or finish."""
+    store.update(job_id, status="running")
+    config = _config(job_id)
+    try:
+        graph = build_graph(make_client(), checkpointer=CHECKPOINTER)
+        resume = {"action": action, "feedback": feedback}
+        paused, payload = _drive(store, job_id, graph, Command(resume=resume), config)
+        if paused:
+            store.update(job_id, status="awaiting_review", review=payload)
+            return
+        _finalize(store, job_id, graph.get_state(config).values)
+    except Exception as exc:
+        logger.error("job {} resume failed: {}", job_id, exc)
+        store.update(job_id, status="failed", error=str(exc))

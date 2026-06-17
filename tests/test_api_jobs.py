@@ -155,3 +155,43 @@ def test_run_job_keeps_partial_deltas_on_failure(tmp_path):
     assert rec.status == "failed"
     # detect_main raises, so only the two nodes before it captured a delta.
     assert [d.node for d in rec.node_deltas] == ["copy_input", "clean_build"]
+
+
+def test_run_job_hitl_pauses_awaiting_review(tmp_path):
+    from b2t.api.jobs import run_job
+
+    store = JobStore()
+    out = tmp_path / "out"
+    job = store.create(input_dir=SAMPLE_DECK, output_dir=out)
+    run_job(store, job.id, SAMPLE_DECK, out, lambda: FakeClient("== S\n\nb\n"), hitl=True)
+    rec = store.get(job.id)
+    assert rec.status == "awaiting_review"
+    assert rec.review["frame_index"] == 0
+    assert rec.review["total"] == 4
+
+
+def test_resume_job_approve_advances_then_finishes(tmp_path):
+    from b2t.api.jobs import resume_job, run_job
+
+    store = JobStore()
+    out = tmp_path / "out"
+    job = store.create(input_dir=SAMPLE_DECK, output_dir=out)
+    run_job(store, job.id, SAMPLE_DECK, out, lambda: FakeClient("== S\n\nb\n"), hitl=True)
+    for _ in range(4):
+        resume_job(store, job.id, "approve", None, lambda: FakeClient("== S\n\nb\n"))
+    rec = store.get(job.id)
+    assert rec.status in {"succeeded", "compile_failed"}
+    assert rec.has_typst is True
+
+
+def test_resume_job_regenerate_stays_on_same_frame(tmp_path):
+    from b2t.api.jobs import resume_job, run_job
+
+    store = JobStore()
+    out = tmp_path / "out"
+    job = store.create(input_dir=SAMPLE_DECK, output_dir=out)
+    run_job(store, job.id, SAMPLE_DECK, out, lambda: FakeClient("== S\n\nb\n"), hitl=True)
+    resume_job(store, job.id, "regenerate", "use bullets", lambda: FakeClient("== S\n\nb\n"))
+    rec = store.get(job.id)
+    assert rec.status == "awaiting_review"
+    assert rec.review["frame_index"] == 0  # still the first frame
