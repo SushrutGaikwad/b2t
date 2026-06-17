@@ -451,6 +451,12 @@ def test_review_endpoint_404_when_not_awaiting():
     assert client.get(f"/api/jobs/{job_id}/review").status_code == 404
 
 
+def test_preview_pdf_404_when_not_awaiting():
+    client = _client()
+    job_id = _run_sample(client)  # non-HITL, terminal, no review pending
+    assert client.get(f"/api/jobs/{job_id}/preview.pdf").status_code == 404
+
+
 def test_index_has_review_panel_and_hitl_toggle():
     text = _client().get("/").text
     assert 'id="review"' in text

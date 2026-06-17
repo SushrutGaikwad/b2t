@@ -74,7 +74,6 @@ class JobRecord:
     node_deltas: list[NodeDelta] = field(default_factory=list)
     hitl: bool = False
     use_fake: bool = False
-    choices: dict = field(default_factory=dict)
     review: dict | None = None
 
 
@@ -122,6 +121,19 @@ class JobStore:
         with self._lock:
             self._jobs[job_id].node_deltas.append(delta)
 
+    def claim_for_resume(self, job_id: str) -> bool:
+        """Atomically flip an awaiting_review job to running.
+
+        Returns True if this caller won the claim. Guards against two concurrent
+        review submissions both resuming the same checkpointer thread.
+        """
+        with self._lock:
+            job = self._jobs.get(job_id)
+            if job is None or job.status != "awaiting_review":
+                return False
+            job.status = "running"
+            return True
+
 
 def _config(job_id: str) -> dict:
     """The LangGraph thread config that scopes a job's checkpointed state."""
@@ -133,7 +145,9 @@ def _drive(store, job_id, graph, stream_input, config) -> tuple[bool, dict | Non
 
     current_node is driven by debug "task" events; node deltas are recorded from
     "updates". A node returning nothing streams as a None update, so it is
-    coerced to an empty dict.
+    coerced to an empty dict. The trail is append-only and repeats nodes across
+    resume cycles; a node paused on an interrupt has not yet yielded, so it is
+    absent from the trail until the run resumes past it.
 
     Returns:
         (paused, review_payload): paused is True if the run hit a review

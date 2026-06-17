@@ -175,7 +175,7 @@ def create_app(store: JobStore | None = None) -> FastAPI:
         output_dir = root.parent / (root.name + "_out")
         job = jobs.create(
             input_dir=root, output_dir=output_dir,
-            hitl=hitl, use_fake=use_fake, choices=parsed,
+            hitl=hitl, use_fake=use_fake,
         )
         logger.info("job {} created for upload ({} files)", job.id, len(files))
         EXECUTOR.submit(
@@ -211,7 +211,7 @@ def create_app(store: JobStore | None = None) -> FastAPI:
         output_dir = Path(tempfile.mkdtemp(prefix="b2t_sample_")) / "out"
         job = jobs.create(
             input_dir=input_dir, output_dir=output_dir,
-            hitl=hitl, use_fake=use_fake, choices=parsed,
+            hitl=hitl, use_fake=use_fake,
         )
         logger.info("job {} created for sample deck {}", job.id, name)
         EXECUTOR.submit(
@@ -283,9 +283,15 @@ def create_app(store: JobStore | None = None) -> FastAPI:
 
     @app.get("/api/jobs/{job_id}/preview.pdf")
     def get_preview(job_id: str):
-        """Return the deck-so-far preview PDF. 404 if not produced."""
+        """Return the deck-so-far preview PDF for the frame under review.
+
+        Gated on the current frame's preview having compiled, so a stale PDF
+        from an earlier frame is never served after a later preview fails.
+        """
         job = jobs.get(job_id)
         if job is None or job.output_dir is None:
+            raise HTTPException(status_code=404, detail="no preview")
+        if not (job.review and job.review.get("preview_ok")):
             raise HTTPException(status_code=404, detail="no preview")
         pdf = Path(job.output_dir) / "preview.pdf"
         if not pdf.exists():
@@ -298,11 +304,10 @@ def create_app(store: JobStore | None = None) -> FastAPI:
         job = jobs.get(job_id)
         if job is None:
             raise HTTPException(status_code=404, detail="unknown job")
-        if job.status != "awaiting_review":
-            raise HTTPException(status_code=400, detail="job is not awaiting review")
         if decision.action not in {"approve", "regenerate"}:
             raise HTTPException(status_code=400, detail="invalid action")
-        jobs.update(job_id, status="running")
+        if not jobs.claim_for_resume(job_id):
+            raise HTTPException(status_code=400, detail="job is not awaiting review")
         EXECUTOR.submit(
             resume_job, jobs, job_id, decision.action, decision.feedback,
             lambda: _make_client(job.use_fake),
