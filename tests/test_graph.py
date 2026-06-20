@@ -6,6 +6,7 @@ from b2t.typst_runner import typst_available
 
 DECK1 = Path(__file__).parent / "fixtures" / "sample_decks" / "deck1"
 DECK2 = Path(__file__).parent / "fixtures" / "sample_decks" / "deck2"
+DECK3 = Path(__file__).parent / "fixtures" / "sample_decks" / "deck3"
 
 FRAME_BODY = "== Slide\n\nbody\n"
 
@@ -77,3 +78,20 @@ def test_hitl_graph_regenerate_reconverts_with_feedback(tmp_path):
     ))
     assert len(calls) == n_before + 1          # convert re-ran the same frame
     assert "make it bold" in calls[-1]         # feedback reached the prompt
+
+
+def test_pipeline_renders_appendix_after_bibliography(tmp_path):
+    out = tmp_path / "out"
+    graph = build_graph(FakeClient(FRAME_BODY))
+    result = dict(graph.invoke({"input_dir": DECK3, "output_dir": out}))
+    typ = (out / "main.typ").read_text(encoding="utf-8")
+    # the backup frame is now an appendix, rendered after the bibliography
+    assert "#show: appendix" in typ
+    assert typ.index("#bibliography") < typ.index("#show: appendix")
+    assert "= Appendix <touying:hidden>" in typ
+    # exactly one frame title is hidden: the single appendix (backup) frame
+    assert typ.count("== Slide <touying:hidden>") == 1
+    assert (out / "references.bib").exists()
+    if typst_available():
+        assert result["compiled"] is True
+        assert Path(result["pdf_path"]).exists()
