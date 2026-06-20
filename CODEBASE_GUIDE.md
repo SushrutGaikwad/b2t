@@ -740,10 +740,11 @@ Splits `stripped_tex` into the pieces the rest of the pipeline needs, via the
 4. `detect_bib_file` resolves any `\addbibresource`/`\bibliography` to the `.bib`.
 
 Returns `preamble`, `meta`, `frames`, `has_toc`, and `bib_file`. Raises if the deck
-has no convertible frames. Frames that appear after a `\appendix` command are tagged
-`is_appendix` (with the current section carried through and then reset), and a
+has no convertible frames. Frames that appear after an `\appendix` command are tagged
+`is_appendix` (the carried section is reset to None at the `\appendix` command, so
+an appendix frame has no section unless a new `\section` follows), and a
 `\section*` command sets `section_starred` on the following frame so the assembler
-knows to hide that heading from the outline.
+knows to hide that heading from the table of contents.
 
 ### 9.7 `convert_frame.py` - `convert_frame(state, client)` (registered as `convert`)
 

@@ -78,9 +78,11 @@ automatically and the pipeline behaves exactly as before.
    `\date`), an ordered list of frames each tagged with its `\section`, a
    table-of-contents flag, and the detected `.bib`. The title-slide, outline,
    and bibliography frames are excluded because the scaffold renders them.
-   Frames after `\appendix` are tagged as appendix material and a starred
-   `\section*` is flagged, so the assembler can keep their headings out of the
-   outline.
+   Frames after an `\appendix` command are tagged as appendix material (the
+   carried section is reset to None immediately, so appendix frames have no
+   section unless a new `\section` follows) and a starred `\section*` is
+   flagged, so the assembler can keep their headings out of the table of
+   contents.
 7. `convert` (LLM): The only model call, run once per frame in a graph cycle.
    Each invocation translates one Beamer frame into a `==` frame-title heading
    plus body (the `candidate`), using the preamble, the reference presentation,
