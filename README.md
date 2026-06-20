@@ -78,6 +78,9 @@ automatically and the pipeline behaves exactly as before.
    `\date`), an ordered list of frames each tagged with its `\section`, a
    table-of-contents flag, and the detected `.bib`. The title-slide, outline,
    and bibliography frames are excluded because the scaffold renders them.
+   Frames after `\appendix` are tagged as appendix material and a starred
+   `\section*` is flagged, so the assembler can keep their headings out of the
+   outline.
 7. `convert` (LLM): The only model call, run once per frame in a graph cycle.
    Each invocation translates one Beamer frame into a `==` frame-title heading
    plus body (the `candidate`), using the preamble, the reference presentation,
@@ -95,7 +98,11 @@ automatically and the pipeline behaves exactly as before.
 10. `assemble` (deterministic): Builds the final deck: the header (imports,
    theme, `config-info` from the metadata, title slide), an optional outline,
    the converted frame bodies interleaved with `= Section` headings, and an
-   optional bibliography plus thank-you slide.
+   optional bibliography plus thank-you slide. Appendix frames are rendered
+   after the bibliography, introduced by `#show: appendix`, with their section
+   and frame headings labelled `<touying:hidden>` so they stay out of the
+   table of contents; a `= Appendix` wrapper is synthesized when the source
+   appendix has no section of its own.
 11. `write_output` (deterministic): Normalizes `image()` references to the
    copied filenames (with extension), writes `main.typ` to the output
    directory, and copies the referenced images and the `.bib` alongside it.

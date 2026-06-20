@@ -740,7 +740,10 @@ Splits `stripped_tex` into the pieces the rest of the pipeline needs, via the
 4. `detect_bib_file` resolves any `\addbibresource`/`\bibliography` to the `.bib`.
 
 Returns `preamble`, `meta`, `frames`, `has_toc`, and `bib_file`. Raises if the deck
-has no convertible frames.
+has no convertible frames. Frames that appear after a `\appendix` command are tagged
+`is_appendix` (with the current section carried through and then reset), and a
+`\section*` command sets `section_starred` on the following frame so the assembler
+knows to hide that heading from the outline.
 
 ### 9.7 `convert_frame.py` - `convert_frame(state, client)` (registered as `convert`)
 
@@ -784,7 +787,11 @@ Builds the final Typst deck deterministically from the scaffold and the converte
 frames (via `typst_scaffold.assemble`): the header (imports, theme, `config-info`
 filled from `meta`, the title slide), an optional outline when `has_toc`, the
 converted frame bodies interleaved with `= Section` headings, and an optional
-bibliography section plus thank-you slide when a `.bib` was found. Returns
+bibliography section plus thank-you slide when a `.bib` was found. When the deck
+contains appendix frames, they are emitted after the bibliography via
+`#show: appendix`, with `<touying:hidden>` labels on their `=` and `==` headings so
+they stay out of the table of contents; a `= Appendix` wrapper is synthesized when
+the source gives no section of its own for the appendix. Returns
 `{"typst_source": ...}`.
 
 ### 9.11 `write_output.py` - `write_output(state)`
