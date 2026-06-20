@@ -867,9 +867,9 @@ def binary_search(a, x):
 
 #show: appendix
 
-= Appendix <touying:appendix>
+= Appendix <touying:hidden>
 
-== Backup: Additional Material <touying:appendix>
+== Backup: Additional Material <touying:hidden>
 
 These slides are typically used for Q&A backup.
 #list(
