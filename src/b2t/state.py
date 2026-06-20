@@ -40,10 +40,16 @@ class FrameUnit(BaseModel):
     Attributes:
         raw: The whole \\begin{frame}...\\end{frame} source.
         section: The \\section this frame belongs to, or None if before any.
+        is_appendix: Whether the frame appears after \\appendix (backup material
+            rendered after the references, kept out of the table of contents).
+        section_starred: Whether the enclosing section was \\section* (Beamer
+            keeps starred sections out of the table of contents).
     """
 
     raw: str
     section: str | None = None
+    is_appendix: bool = False
+    section_starred: bool = False
 
 
 class PipelineState(BaseModel):

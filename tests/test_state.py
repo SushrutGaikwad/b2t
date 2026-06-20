@@ -89,3 +89,15 @@ def test_deck_meta_and_frame_unit_construct():
     unit = FrameUnit(raw=r"\begin{frame}x\end{frame}", section="Intro")
     assert unit.section == "Intro"
     assert FrameUnit(raw="y").section is None
+
+
+def test_frame_unit_appendix_and_starred_default_false():
+    unit = FrameUnit(raw="x")
+    assert unit.is_appendix is False
+    assert unit.section_starred is False
+
+
+def test_frame_unit_appendix_and_starred_settable():
+    unit = FrameUnit(raw="y", is_appendix=True, section_starred=True)
+    assert unit.is_appendix is True
+    assert unit.section_starred is True
