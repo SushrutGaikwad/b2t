@@ -90,7 +90,7 @@ automatically and the pipeline behaves exactly as before.
    markdown code fence is stripped deterministically.
 8. `preview` (deterministic): With review enabled, assembles the deck so far
    (header plus already-approved frames plus the candidate, with the bibliography
-   and thank-you slide when the deck has a `.bib` so citation frames resolve),
+   when the deck has a `.bib` so citation frames resolve),
    normalizes image paths, copies the images and `.bib` next to it, and compiles
    it to `preview.pdf` so the reviewer sees the new frame in context. A no-op
    when review is off.
@@ -100,7 +100,8 @@ automatically and the pipeline behaves exactly as before.
 10. `assemble` (deterministic): Builds the final deck: the header (imports,
    theme, `config-info` from the metadata, title slide), an optional outline,
    the converted frame bodies interleaved with `= Section` headings, and an
-   optional bibliography plus thank-you slide. Appendix frames are rendered
+   optional bibliography. No thank-you slide is auto-added; one appears only if
+   the source deck has its own. Appendix frames are rendered
    after the bibliography, introduced by `#show: appendix`, with their section
    and frame headings labelled `<touying:hidden>` so they stay out of the
    table of contents; a `= Appendix` wrapper is synthesized when the source

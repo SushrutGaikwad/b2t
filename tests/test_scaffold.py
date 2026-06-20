@@ -70,7 +70,7 @@ def test_assemble_with_toc_and_bibliography():
     assert "= Outline <touying:hidden>" in out
     assert "#components.adaptive-columns(outline(title: none, indent: 1em))" in out
     assert '#bibliography("references.bib", title: none, style: "apa")' in out
-    assert "Thank you!" in out
+    assert "Thank you!" not in out  # the bibliography block no longer adds a thank-you slide
 
 
 def test_hide_frame_title_appends_label():

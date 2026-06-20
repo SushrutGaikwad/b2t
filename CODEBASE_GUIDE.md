@@ -764,7 +764,7 @@ parameter (`client`), which is why `build_graph` binds it with `partial`. For
 ### 9.8 `preview.py` - `preview_node(state)`
 
 With review enabled, assembles the deck so far (header plus already-approved
-`converted_frames` plus the `candidate`, including the bibliography and thank-you
+`converted_frames` plus the `candidate`, including the bibliography
 when the deck has a `.bib`) via `typst_scaffold.assemble`, normalizes image paths
 with `fix_image_paths`, copies the images and the `.bib` into `output_dir`, writes
 `output_dir/preview.typ`, and compiles it, returning `preview_path`,
@@ -788,7 +788,8 @@ Builds the final Typst deck deterministically from the scaffold and the converte
 frames (via `typst_scaffold.assemble`): the header (imports, theme, `config-info`
 filled from `meta`, the title slide), an optional outline when `has_toc`, the
 converted frame bodies interleaved with `= Section` headings, and an optional
-bibliography section plus thank-you slide when a `.bib` was found. When the deck
+bibliography section when a `.bib` was found (no thank-you slide is auto-added;
+one appears only if the source deck has its own). When the deck
 contains appendix frames, they are emitted after the bibliography via
 `#show: appendix`, with `<touying:hidden>` labels on their `=` and `==` headings so
 they stay out of the table of contents; a `= Appendix` wrapper is synthesized when

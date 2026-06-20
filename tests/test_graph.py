@@ -31,7 +31,7 @@ def test_pipeline_appends_bibliography_for_bib_deck(tmp_path):
     result = dict(graph.invoke({"input_dir": DECK2, "output_dir": out}))
     typ = (out / "main.typ").read_text(encoding="utf-8")
     assert '#bibliography("references.bib", title: none, style: "apa")' in typ
-    assert "Thank you!" in typ
+    assert "Thank you!" not in typ  # no thank-you is auto-added; deck2 has none of its own
     assert (out / "references.bib").exists()
     # the \printbibliography frame must not be converted as a content frame
     assert "printbibliography" not in typ

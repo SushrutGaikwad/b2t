@@ -126,17 +126,15 @@ def build_header(meta: DeckMeta | None, aspect_ratio: str) -> str:
 
 
 def _bibliography_block(bib_name: str) -> str:
-    """Return the References section, bibliography call, and thank-you slide."""
+    """Return the References section and bibliography call.
+
+    No closing slide is added. A thank-you slide appears only when the source
+    deck has its own, converted as a normal frame.
+    """
     return (
         "\n= References\n\n"
         "== References <touying:hidden>\n\n"
-        f'#bibliography("{bib_name}", title: none, style: "apa")\n\n'
-        "#slide(config: (\n"
-        "  page: (header: none, footer: none),\n"
-        "))[\n"
-        "  #set align(center + horizon)\n"
-        "  #text(size: 2.5em)[Thank you!]\n"
-        "]\n"
+        f'#bibliography("{bib_name}", title: none, style: "apa")\n'
     )
 
 

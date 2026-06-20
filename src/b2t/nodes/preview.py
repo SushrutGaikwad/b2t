@@ -12,8 +12,8 @@ def preview_node(state: PipelineState) -> dict:
     """Compile a preview of the deck so far, for human review (HITL only).
 
     Assembles the header, already-approved frames, and the current candidate,
-    appending the bibliography and thank-you slide when the deck has a .bib so a
-    frame whose citations resolve against it compiles during review. Image
+    appending the bibliography when the deck has a .bib so a frame whose
+    citations resolve against it compiles during review. Image
     references are normalized and the image files and the .bib copied alongside
     preview.typ, the same as the final write_output, so a frame referencing an
     image or a citation compiles during review (write_output only runs after the
