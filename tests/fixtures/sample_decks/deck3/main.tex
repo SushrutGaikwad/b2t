@@ -1,0 +1,40 @@
+\documentclass[aspectratio=169]{beamer}
+\usepackage{appendixnumberbeamer}
+
+\usepackage{graphicx}
+\usepackage[style=authoryear]{biblatex}
+\addbibresource{references.bib}
+
+\usetheme{Madrid}
+
+\title{A Sample Deck}
+\subtitle{For Testing the b2t Pipeline}
+\author{John Doe}
+\institute{MIT}
+\date{June 2026}
+
+\begin{document}
+
+% Title slide
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\begin{frame}
+  \tableofcontents
+\end{frame}
+
+% Section of slides: bullet lists, math, and an included image.
+
+\section{Introduction}
+\input{intro}
+
+\section{Math}
+\input{math.tex}
+
+\input{refs.tex}
+
+\appendix
+\input{append.tex}
+
+\end{document}
