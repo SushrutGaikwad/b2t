@@ -141,3 +141,22 @@ def test_assemble_no_appendix_emits_no_show_rule():
     frames = [FrameUnit(raw="", section="Intro")]
     out = assemble(DeckMeta(), "4-3", False, frames, ["== S\n\nb"], None)
     assert "#show: appendix" not in out
+
+
+def test_assemble_appendix_synthesized_section_emitted_once():
+    frames = [
+        FrameUnit(raw="", section=None, is_appendix=True),
+        FrameUnit(raw="", section=None, is_appendix=True),
+    ]
+    out = assemble(DeckMeta(), "4-3", False, frames, ["== A\n\na", "== B\n\nb"], None)
+    assert out.count("= Appendix <touying:hidden>") == 1
+
+
+def test_assemble_truncates_to_converted_entries_for_preview():
+    frames = [
+        FrameUnit(raw="", section="Intro"),
+        FrameUnit(raw="", section=None, is_appendix=True),
+    ]
+    out = assemble(DeckMeta(), "4-3", False, frames, ["== Only\n\nbody"], None)
+    assert "== Only" in out
+    assert "#show: appendix" not in out
