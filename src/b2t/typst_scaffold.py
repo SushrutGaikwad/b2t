@@ -191,6 +191,8 @@ def _appendix_block(pairs: list[tuple[FrameUnit, str]]) -> str:
             parts.append(_section_heading(unit.section, True))
             emitted_section = True
         elif unit.section is None and not emitted_section:
+            # Synthesize one wrapper only when the appendix has no section of
+            # its own; a real section heading above also sets emitted_section.
             parts.append("= Appendix <touying:hidden>")
             emitted_section = True
         prev_section = unit.section
