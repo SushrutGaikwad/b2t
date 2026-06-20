@@ -50,8 +50,9 @@ def parse_meta(preamble: str) -> DeckMeta:
 
 
 _TOKEN_RE = re.compile(
-    r"\\section\*?\{(?P<section>[^}]*)\}"
-    r"|\\begin\{frame\}(?P<frame>.*?)\\end\{frame\}",
+    r"\\section(?P<star>\*)?\{(?P<section>[^}]*)\}"
+    r"|\\begin\{frame\}(?P<frame>.*?)\\end\{frame\}"
+    r"|(?P<appendix>\\appendix)\b",
     re.DOTALL,
 )
 
@@ -65,7 +66,9 @@ _FRAME_SHORTHAND_RE = re.compile(r"\\frame(?=[\s<{])")
 def split_frames(body: str) -> tuple[list[FrameUnit], bool]:
     """Split the document body into section-tagged frames.
 
-    Walks the body in order, tracking the current \\section. The title-slide,
+    Walks the body in order, tracking the current \\section (and whether it was
+    starred) and whether \\appendix has been seen. Every frame after \\appendix
+    is tagged is_appendix with the carried section reset to None. The title-slide,
     table-of-contents, and bibliography frames are excluded because the scaffold
     renders them; the table-of-contents frame sets has_toc.
 
@@ -87,10 +90,18 @@ def split_frames(body: str) -> tuple[list[FrameUnit], bool]:
     frames: list[FrameUnit] = []
     has_toc = False
     current_section: str | None = None
+    section_starred = False
+    in_appendix = False
     matched = 0
     for match in _TOKEN_RE.finditer(body):
+        if match.group("appendix") is not None:
+            in_appendix = True
+            current_section = None
+            section_starred = False
+            continue
         if match.group("section") is not None:
             current_section = match.group("section").strip() or None
+            section_starred = match.group("star") is not None
             continue
         matched += 1
         inner = match.group("frame")
@@ -99,7 +110,14 @@ def split_frames(body: str) -> tuple[list[FrameUnit], bool]:
             continue
         if any(marker in inner for marker in _SCAFFOLD_FRAME_MARKERS):
             continue
-        frames.append(FrameUnit(raw=match.group(0), section=current_section))
+        frames.append(
+            FrameUnit(
+                raw=match.group(0),
+                section=current_section,
+                is_appendix=in_appendix,
+                section_starred=section_starred,
+            )
+        )
     if matched != body.count(r"\begin{frame}"):
         raise ValueError(r"unmatched \begin{frame} in document body")
     return frames, has_toc

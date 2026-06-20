@@ -108,3 +108,47 @@ def test_split_frames_frametitle_is_not_shorthand():
 def test_split_frames_empty_section_is_none():
     frames, _ = split_frames(r"\section{}\begin{frame}{X}a\end{frame}")
     assert frames[0].section is None
+
+
+APPENDIX_BODY = r"""
+\section{Methods}
+\begin{frame}{Approach}One\end{frame}
+\appendix
+\begin{frame}{Backup}two\end{frame}
+\begin{frame}{More Backup}three\end{frame}
+"""
+
+
+def test_split_frames_tags_appendix_frames():
+    frames, _ = split_frames(APPENDIX_BODY)
+    assert [f.is_appendix for f in frames] == [False, True, True]
+
+
+def test_appendix_resets_the_carried_section():
+    frames, _ = split_frames(APPENDIX_BODY)
+    assert frames[0].section == "Methods"
+    assert frames[1].section is None
+    assert frames[2].section is None
+
+
+def test_section_after_appendix_is_kept_and_tagged_appendix():
+    frames, _ = split_frames(r"\appendix\section{Extra}\begin{frame}{X}a\end{frame}")
+    assert frames[0].is_appendix is True
+    assert frames[0].section == "Extra"
+
+
+def test_starred_section_sets_section_starred():
+    frames, _ = split_frames(r"\section*{Hidden}\begin{frame}{X}a\end{frame}")
+    assert frames[0].section == "Hidden"
+    assert frames[0].section_starred is True
+
+
+def test_plain_section_is_not_starred():
+    frames, _ = split_frames(r"\section{Shown}\begin{frame}{X}a\end{frame}")
+    assert frames[0].section_starred is False
+
+
+def test_appendix_requires_a_word_boundary():
+    # a longer command starting with "appendix" must not trigger the split
+    frames, _ = split_frames(r"\appendixfoo\begin{frame}{X}a\end{frame}")
+    assert frames[0].is_appendix is False
