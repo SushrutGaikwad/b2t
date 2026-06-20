@@ -140,16 +140,62 @@ def _bibliography_block(bib_name: str) -> str:
     )
 
 
-def _body(frames: list[FrameUnit], converted: list[str]) -> str:
-    """Interleave = Section headings (on change) with converted frame bodies."""
+def _hide_frame_title(typ: str) -> str:
+    """Append <touying:hidden> to the first level-2 (==) heading line.
+
+    Used for appendix frames, whose slide titles stay out of the table of
+    contents. A higher-level (===) heading and an already-hidden title are left
+    untouched, and a body with no == heading is returned unchanged.
+    """
+    lines = typ.split("\n")
+    for i, line in enumerate(lines):
+        stripped = line.lstrip()
+        if stripped.startswith("==") and not stripped.startswith("==="):
+            if "<touying:hidden>" not in line:
+                lines[i] = line.rstrip() + " <touying:hidden>"
+            return "\n".join(lines)
+    return typ
+
+
+def _section_heading(section: str, hidden: bool) -> str:
+    """Return a = Section heading, hidden from the outline when hidden is True."""
+    return f"= {section} <touying:hidden>" if hidden else f"= {section}"
+
+
+def _body(pairs: list[tuple[FrameUnit, str]]) -> str:
+    """Interleave = Section headings (on change) with converted frame bodies.
+
+    A heading that came from a starred \\section* is hidden from the outline.
+    """
     parts: list[str] = []
     prev_section: str | None = None
-    for unit, typ in zip(frames, converted):
+    for unit, typ in pairs:
         if unit.section is not None and unit.section != prev_section:
-            parts.append(f"= {unit.section}")
+            parts.append(_section_heading(unit.section, unit.section_starred))
         prev_section = unit.section
         parts.append(typ.strip())
     return "\n\n".join(parts)
+
+
+def _appendix_block(pairs: list[tuple[FrameUnit, str]]) -> str:
+    """Render the appendix: #show: appendix then hidden-heading backup frames.
+
+    Appendix section headings and frame titles are hidden from the outline. A
+    single = Appendix wrapper is synthesized when the source gives no section.
+    """
+    parts: list[str] = ["#show: appendix"]
+    prev_section: str | None = None
+    emitted_section = False
+    for unit, typ in pairs:
+        if unit.section is not None and unit.section != prev_section:
+            parts.append(_section_heading(unit.section, True))
+            emitted_section = True
+        elif unit.section is None and not emitted_section:
+            parts.append("= Appendix <touying:hidden>")
+            emitted_section = True
+        prev_section = unit.section
+        parts.append(_hide_frame_title(typ.strip()))
+    return "\n" + "\n\n".join(parts) + "\n"
 
 
 def assemble(
@@ -160,11 +206,21 @@ def assemble(
     converted: list[str],
     bib_name: str | None,
 ) -> str:
-    """Assemble the full Typst deck from the scaffold and converted frames."""
+    """Assemble the full Typst deck from the scaffold and converted frames.
+
+    Frames after \\appendix render after the bibliography, introduced by
+    #show: appendix, with their section and frame headings hidden from the
+    table of contents.
+    """
+    pairs = list(zip(frames, converted))
+    body_pairs = [p for p in pairs if not p[0].is_appendix]
+    appendix_pairs = [p for p in pairs if p[0].is_appendix]
     out = build_header(meta, aspect_ratio)
     if has_toc:
         out += _OUTLINE
-    out += "\n" + _body(frames, converted) + "\n"
+    out += "\n" + _body(body_pairs) + "\n"
     if bib_name:
         out += _bibliography_block(bib_name)
+    if appendix_pairs:
+        out += _appendix_block(appendix_pairs)
     return out

@@ -36,7 +36,7 @@ def test_render_date_invalid_day_falls_back():
 
 
 from b2t.state import DeckMeta, FrameUnit
-from b2t.typst_scaffold import assemble, build_header
+from b2t.typst_scaffold import assemble, build_header, _hide_frame_title
 
 
 def test_build_header_fills_meta_and_aspect():
@@ -71,3 +71,73 @@ def test_assemble_with_toc_and_bibliography():
     assert "#components.adaptive-columns(outline(title: none, indent: 1em))" in out
     assert '#bibliography("references.bib", title: none, style: "apa")' in out
     assert "Thank you!" in out
+
+
+def test_hide_frame_title_appends_label():
+    assert _hide_frame_title("== Backup\n\nbody") == "== Backup <touying:hidden>\n\nbody"
+
+
+def test_hide_frame_title_is_idempotent():
+    once = _hide_frame_title("== Backup\n\nbody")
+    assert _hide_frame_title(once) == once
+
+
+def test_hide_frame_title_ignores_level_three_heading():
+    assert "<touying:hidden>" not in _hide_frame_title("=== Sub\n\nbody")
+
+
+def test_hide_frame_title_no_heading_returns_unchanged():
+    assert _hide_frame_title("just body\nmore") == "just body\nmore"
+
+
+def test_assemble_hides_starred_section_heading():
+    frames = [FrameUnit(raw="", section="Secret", section_starred=True)]
+    out = assemble(DeckMeta(), "4-3", False, frames, ["== S\n\nb"], None)
+    assert "= Secret <touying:hidden>" in out
+
+
+def test_assemble_plain_section_heading_is_not_hidden():
+    frames = [FrameUnit(raw="", section="Open")]
+    out = assemble(DeckMeta(), "4-3", False, frames, ["== S\n\nb"], None)
+    assert "= Open" in out
+    assert "= Open <touying:hidden>" not in out
+
+
+def test_assemble_appendix_after_bibliography_with_synthesized_section():
+    frames = [
+        FrameUnit(raw="", section="Intro"),
+        FrameUnit(raw="", section=None, is_appendix=True),
+    ]
+    converted = ["== Motivation\n\nA", "== Backup\n\nB"]
+    out = assemble(DeckMeta(title="T"), "4-3", False, frames, converted, "references.bib")
+    assert "#show: appendix" in out
+    assert out.index("#bibliography") < out.index("#show: appendix")
+    assert "= Appendix <touying:hidden>" in out
+    assert "== Backup <touying:hidden>" in out
+
+
+def test_assemble_appendix_without_bibliography():
+    frames = [
+        FrameUnit(raw="", section="Intro"),
+        FrameUnit(raw="", section=None, is_appendix=True),
+    ]
+    out = assemble(DeckMeta(), "4-3", False, frames, ["== M\n\nA", "== B\n\nb"], None)
+    assert "#show: appendix" in out
+    assert "#bibliography" not in out
+    assert "= Appendix <touying:hidden>" in out
+
+
+def test_assemble_appendix_uses_source_section_when_present():
+    frames = [
+        FrameUnit(raw="", section="Intro"),
+        FrameUnit(raw="", section="Extra Material", is_appendix=True),
+    ]
+    out = assemble(DeckMeta(), "4-3", False, frames, ["== M\n\nA", "== B\n\nb"], None)
+    assert "= Extra Material <touying:hidden>" in out
+    assert "= Appendix <touying:hidden>" not in out
+
+
+def test_assemble_no_appendix_emits_no_show_rule():
+    frames = [FrameUnit(raw="", section="Intro")]
+    out = assemble(DeckMeta(), "4-3", False, frames, ["== S\n\nb"], None)
+    assert "#show: appendix" not in out
