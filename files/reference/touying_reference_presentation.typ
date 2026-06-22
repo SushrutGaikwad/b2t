@@ -1,9 +1,24 @@
-#import "@preview/touying:0.7.3": *
+#import "@preview/touying:0.7.4": *
 #import themes.university: *
 
 #import "@preview/theorion:0.6.0": *
 #import cosmos.fancy: *
 #show: show-theorion
+
+// Generic Beamer-style block
+#let block-frame(
+  title,
+  body,
+  border: blue.darken(30%),
+  fill: blue.lighten(95%),
+  symbol: none,
+) = fancy-box(
+  get-border-color: loc => border,
+  get-body-color: loc => fill,
+  get-symbol: loc => symbol,
+  full-title: title,
+  body,
+)
 
 #show: university-theme.with(
   align: horizon,
@@ -82,6 +97,10 @@ Footnotes are nice. See this#footnote[This is a footnote.]. This is another sent
 = Special Environments
 
 == Special Environments I
+
+#block-frame[A Generic Block][
+  This is an example of a generic block.
+]
 
 #remark-block[
   This is an example of a remark.

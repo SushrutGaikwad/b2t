@@ -53,6 +53,19 @@ def test_build_header_uses_placeholders_when_meta_empty():
     assert 'aspect-ratio: "4-3"' in header
 
 
+def test_build_header_imports_touying_0_7_4():
+    assert '#import "@preview/touying:0.7.4": *' in build_header(None, "4-3")
+
+
+def test_build_header_defines_block_frame_helper():
+    header = build_header(None, "4-3")
+    assert "#let block-frame(" in header
+    assert "fancy-box(" in header
+    # Defined after the theorion import it depends on, before the theme setup.
+    assert header.index("#show: show-theorion") < header.index("#let block-frame(")
+    assert header.index("#let block-frame(") < header.index("#show: university-theme.with(")
+
+
 def test_assemble_inserts_each_section_once_no_toc_no_bib():
     frames = [FrameUnit(raw="", section="Intro"), FrameUnit(raw="", section="Intro")]
     converted = ["== Motivation\n\nA", "== Goals\n\nB"]

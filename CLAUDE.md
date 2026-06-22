@@ -45,7 +45,7 @@ LLM only:
 - converting messy manually-written bibliographies into .bib
 
 ## Target Typst packages (pin these versions)
-touying 0.7.3, physica 0.9.8, whalogen 0.3.0, cetz 0.5.2, fletcher 0.5.8,
+touying 0.7.4, physica 0.9.8, whalogen 0.3.0, cetz 0.5.2, fletcher 0.5.8,
 lilaq 0.6.0, lovelace 0.3.1, theorion 0.6.0, subpar 0.2.2, plotsy-3d 0.2.1,
 unify 0.8.1.
 

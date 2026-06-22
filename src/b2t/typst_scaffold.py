@@ -62,12 +62,27 @@ def render_date(date_raw: str | None) -> str:
     return "datetime.today()"
 
 
-_HEADER_TEMPLATE = '''#import "@preview/touying:0.7.3": *
+_HEADER_TEMPLATE = '''#import "@preview/touying:0.7.4": *
 #import themes.university: *
 
 #import "@preview/theorion:0.6.0": *
 #import cosmos.fancy: *
 #show: show-theorion
+
+// Generic Beamer-style block
+#let block-frame(
+  title,
+  body,
+  border: blue.darken(30%),
+  fill: blue.lighten(95%),
+  symbol: none,
+) = fancy-box(
+  get-border-color: loc => border,
+  get-body-color: loc => fill,
+  get-symbol: loc => symbol,
+  full-title: title,
+  body,
+)
 
 #show: university-theme.with(
   align: horizon,
