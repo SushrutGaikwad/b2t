@@ -78,15 +78,19 @@ enforced in the code):
   actually succeeds and produces a PDF.
 - **Never touch the user's files.** All work happens on a *copy* of the input.
 
-> **Note on scope.** This guide describes **v0**, the smallest working version: it
-> handles plain decks (titles, sections, text, bullet lists, basic math, images).
-> Bigger features (accessibility tagging, bibliographies, diagram conversion) are
-> on the roadmap in `CLAUDE.md` but not built yet. However, two pieces of
-> *foundation* for the bigger roadmap are already in place even though there is
-> still only one AI step: a **prompt registry** (versioned prompt files) and
-> **per-node model and prompt-version selection** with provenance. These are
-> introduced now, while the project is small, so every future AI step inherits the
-> same shape. The testing UI and a **continuous-integration** workflow are also in.
+> **Note on scope.** This guide describes the pipeline as it stands today. It
+> handles plain decks (titles, sections, text, bullet lists, basic math, images)
+> plus **per-frame human review**, **bibliographies** (detect an existing `.bib`,
+> map citations, emit a References section), and **deck structure** (aspect ratio,
+> starred sections, `\appendix`). There is still only one AI step (`convert`). The
+> **theorion** theorem package is wired into the scaffold, but the rest of the
+> math/units/chemistry substitutions, **accessibility tagging**, **diagram
+> conversion**, an automatic **compile-fix loop**, and the **SaaS wrapper** are on
+> the roadmap in `CLAUDE.md` but not built yet. Two pieces of *foundation* for the
+> multi-LLM roadmap are in place even with one AI step: a **prompt registry**
+> (versioned prompt files) and **per-node model and prompt-version selection** with
+> provenance, so every future AI step inherits the same shape. The testing UI and a
+> **continuous-integration** workflow are also in.
 
 ---
 
@@ -147,7 +151,7 @@ flowchart TB
     web --> jobs["api/jobs.py<br/>run_job()<br/><i>runs in background</i>"]
     lib --> gbuild["graph.py<br/>build_graph()"]
     jobs --> gbuild
-    gbuild --> nodes["nodes/*<br/>(8 step functions)"]
+    gbuild --> nodes["nodes/*<br/>(12 step functions)"]
     nodes --> latex["latex/*<br/>(deterministic helpers)"]
     nodes --> runner["typst_runner.py<br/>(runs the compiler)"]
     nodes --> images["typst_images.py<br/>typst_output.py"]
@@ -182,12 +186,13 @@ b2t/
     __init__.py           one-line package docstring (no logic)
     config.py             constants: paths, the model catalog, build-file extensions
     state.py              PipelineState plus the LLM selection/provenance submodels
-    graph.py              build_graph(): wires the 8 nodes into a pipeline
+    graph.py              build_graph(): wires the 12 nodes into a pipeline
     app.py                convert_deck(): the library entry point
     llm.py                the LLM client interface + real and fake implementations
     prompts.py            the prompt registry loader + template renderer
     log.py                setup_logging(): console + rotating file logs
     typst_runner.py       runs `typst compile`, captures the result
+    typst_scaffold.py     assembles the final Typst deck (header, frames, bib)
     typst_images.py       rewrites image() paths in generated Typst
     typst_output.py       strips a markdown code fence the model may add
 
@@ -199,6 +204,7 @@ b2t/
 
     latex/                the deterministic LaTeX logic the nodes call
       aspect.py  cleanup.py  detect.py  includes.py  flatten.py  overlays.py
+      split.py
 
     api/                  the web layer
       app.py              FastAPI app + HTTP endpoints (web entry point)
@@ -223,9 +229,10 @@ b2t/
     specs/                one design document per feature
     plans/                one step-by-step implementation plan per feature
 
-  tests/                  pytest suite (164 tests across 21 files) + fixtures
+  tests/                  pytest suite (239 tests across 23 files) + fixtures
     conftest.py           shared fixture (a writable copy of a sample deck)
-    fixtures/sample_decks/ bundled Beamer decks (deck1 plain, deck2 with a bib)
+    fixtures/sample_decks/ bundled Beamer decks (deck1 plain, deck2 bib,
+                          deck3 appendix+bib, deck4 special environments)
     test_*.py             one test module per source module
 
   .github/workflows/ci.yml   the continuous-integration workflow (see section 17)
@@ -548,14 +555,18 @@ Typst characters like `\frac` and `$` need no escaping.
   raises `FileNotFoundError` if the file is missing and `KeyError` if `system` or
   `user_template` is absent.
 
-The default `convert/v2.toml` prompt holds today's only AI instruction: a `system`
-message that says "convert Beamer to Typst Touying using the university theme,
-follow the reference and the math guide, output only Typst, never use overlays",
-and a `user_template` that stacks the reference deck, the guides, an aspect-ratio
-directive, and the source via the tokens `{{reference}}`, `{{guides}}`,
-`{{aspect_ratio}}`, and `{{source}}`. (`v1` is the same prompt without the
-aspect-ratio directive, kept for provenance; the convert node always supplies the
-`aspect_ratio` value, which `v1` simply ignores.)
+The default `convert/v4.toml` prompt holds today's only AI instruction. Because the
+`convert` node now runs **once per frame**, the prompt converts a *single* Beamer
+frame: its `system` message says "convert one Beamer frame into Typst for the
+university theme, output only a level-2 (`==`) heading carrying the frame title plus
+the converted body, emit no imports/theme/title/outline/preamble, map citation
+commands to `@key` references, never use overlays". Its `user_template` stacks the
+reference deck, the guides, the preamble (context only), an optional
+reviewer-feedback block, and the one frame via the tokens `{{reference}}`,
+`{{guides}}`, `{{preamble}}`, `{{feedback}}`, and `{{frame}}`. (`v1`/`v2` were
+whole-deck prompts and `v3` the first per-frame one; all three are kept for
+provenance. `v4` adds the `{{feedback}}` block so a reviewer's regenerate request can
+steer the next attempt; the node supplies an empty string when there is no feedback.)
 
 ### 7.3 `nodes/_llm.py` - the shared runner
 
@@ -817,7 +828,7 @@ Calls `compile_typst(state.typst_path)` and maps the result into
 result.error}`. It **never raises**: a failed compile is recorded as data, not an
 exception. This is the last node; the graph then ends.
 
-> **Heads-up (v0 limitation):** there is no automatic retry loop yet. If the
+> **Heads-up (current limitation):** there is no automatic retry loop yet. If the
 > compile fails, the error is recorded and surfaced to the user, who can fix the
 > Typst by hand in the web UI and recompile. An automatic AI "fix loop" is on the
 > roadmap, not built.
@@ -869,6 +880,11 @@ This module discovers which files and images a deck pulls in.
   graph recursively starting from the main file, using a `seen` set to avoid
   processing the same file twice. For each included `.tex` it records the path and
   recurses into it; for each `\includegraphics` it resolves and records the image.
+- `detect_bib_file(text, deck_dir) -> Path | None` - resolves an
+  `\addbibresource`/`\bibliography` target to an existing `.bib` path (appending the
+  `.bib` suffix if omitted). Returns `None` when the deck declares no bibliography,
+  and raises `FileNotFoundError` if a bibliography is declared but the file is
+  missing (fail loudly). The `split_deck` node calls this.
 
 ```mermaid
 flowchart TD
@@ -921,13 +937,36 @@ flowchart LR
   and so on for beamer's documented codes. Unknown codes fall back to `"4-3"`. The
   `detect_main` node calls this and stores the result, and the convert node passes
   it to the model so the generated Touying deck keeps the source deck's shape.
-  Touying 0.7.3 accepts any `"W-H"` ratio, so the non-standard sizes still compile.
+  Touying 0.7.4 accepts any `"W-H"` ratio, so the non-standard sizes still compile.
+
+### 10.7 `split.py` - cutting the source into preamble, metadata, and frames
+
+This is the helper behind the `split_deck` node (section 9.6). It turns one
+overlay-free LaTeX string into the structured pieces the per-frame loop needs.
+
+- `split_preamble(stripped) -> (preamble, body)` - splits the source at
+  `\begin{document}`; raises `ValueError` if that marker is absent (the deck cannot be
+  split).
+- `_field(name, preamble)` - a private helper returning the brace argument of
+  `\name{...}`, tolerating Beamer's optional short form (`\title[Short]{Long}`).
+- `parse_meta(preamble) -> DeckMeta` - reads `\title`, `\subtitle`, `\author`,
+  `\institute`, and `\date` into a `DeckMeta` (nested braces are not handled - plain
+  decks only; the raw `\date` text is kept verbatim and rendered at assembly time).
+- `split_frames(body) -> (frames, has_toc)` - walks the body in order with a single
+  token regex matching `\section`, a whole `\begin{frame}...\end{frame}`, or
+  `\appendix`. It tracks the current `\section` (and whether it was starred), and
+  whether `\appendix` has been seen (after which every frame is tagged `is_appendix`
+  with the carried section reset to `None`). Frames whose body holds `\titlepage`,
+  `\tableofcontents`, or `\printbibliography` are excluded (the scaffold renders
+  them), and a `\tableofcontents` frame sets `has_toc`. It raises `ValueError` on the
+  `\frame{...}` shorthand (which would be silently lost) and on an unmatched
+  `\begin{frame}`.
 
 ---
 
 ## 11. The Typst helpers
 
-These three modules handle producing and compiling the output. They live at the top
+These four modules handle producing and compiling the output. They live at the top
 level of the package (not under `latex/`) because they deal with the Typst side, not
 the LaTeX side.
 
@@ -973,6 +1012,38 @@ the LaTeX side.
 > would never flag the mistake, which is exactly why we strip it deterministically
 > instead of relying on the model to behave.
 
+### 11.4 `typst_scaffold.py` - assembling the final deck
+
+This is the deterministic assembler behind the `assemble` and `preview` nodes. It
+stitches the header, the per-frame converted bodies, the bibliography, and the
+appendix into one Typst document; the LLM only ever produced the individual frame
+bodies.
+
+- `assemble(meta, aspect_ratio, has_toc, frames, converted, bib_name) -> str` - the
+  public entry point. It pairs each `FrameUnit` with its converted Typst, separates
+  the appendix frames from the body frames, then emits, in order: the header, an
+  optional outline (when `has_toc`), the body, an optional bibliography (when a
+  `.bib` was found), and an optional appendix.
+- `build_header(meta, aspect_ratio)` - fills a header template with the imports
+  (touying 0.7.4 and theorion 0.6.0), the university theme, a generic `block-frame`
+  helper (a Beamer-style titled box built on theorion's `fancy-box`), the
+  `config-info` from the metadata (absent fields fall back to the reference deck's
+  placeholders), and the title slide.
+- `render_date(date_raw)` and `_typst_datetime(...)` - turn a raw Beamer `\date` into
+  a Typst `datetime(...)`, trying `YYYY-MM-DD`, `Month DD, YYYY`, and `Month YYYY`,
+  validating each as a real calendar date, and falling back to `datetime.today()`
+  (keeping the original text in a comment) for `\today`, free text, or an
+  out-of-range date.
+- `_body(pairs)` - interleaves `= Section` headings (emitted on a section change)
+  with the converted frame bodies; a heading from a starred `\section*` is hidden
+  from the outline with `<touying:hidden>`.
+- `_bibliography_block(bib_name)` - emits the `= References` section and the
+  `#bibliography(...)` call (APA style, no auto thank-you slide).
+- `_appendix_block(pairs)` and `_hide_frame_title(typ)` - render appendix frames
+  after the bibliography behind `#show: appendix`, hiding both their section headings
+  and their `==` frame titles from the outline; a single `= Appendix` wrapper is
+  synthesized when the appendix has no section of its own.
+
 ---
 
 ## 12. Logging (`log.py`)
@@ -1014,13 +1085,16 @@ This module owns the job lifecycle.
 - `EXECUTOR = ThreadPoolExecutor(max_workers=2)` - a module-level thread pool. Job
   conversions run here so HTTP requests can return immediately. At most two jobs run
   at once.
-- `JobRecord` (dataclass) - everything tracked about one job: `id`, `status`,
+- `JobRecord` (dataclass) - everything tracked about one job: `id`, `status` (one of
+  `queued`, `running`, `awaiting_review`, `succeeded`, `compile_failed`, `failed`),
   `current_node`, `error`, `input_dir`, `output_dir`, `main_tex`, `included_tex`,
   `images`, `has_typst`, `typst_path`, `pdf_path`, two AI-provenance maps
   (`llm_runs` = `{node: {model, prompt_version}}` and `llm_rendered` =
-  `{node: {system, user}}`, the exact prompt each node sent), and two fields that
-  feed the state inspector: `seed_state` (the JSON-safe pipeline seed) and
-  `node_deltas` (a list of per-node `NodeDelta`s captured as each node finishes).
+  `{node: {system, user}}`, the exact prompt each node sent), two fields that
+  feed the state inspector (`seed_state`, the JSON-safe pipeline seed, and
+  `node_deltas`, a list of per-node `NodeDelta`s captured as each node finishes), and
+  three review fields: `hitl` (whether per-frame review is on), `use_fake`, and
+  `review` (the payload of the frame currently awaiting review, or `None`).
 - `JobStore` - a thread-safe in-memory registry of jobs, guarded by a
   `threading.Lock` (the lock prevents two threads corrupting the data at once):
   - `create(**kwargs)` - makes a `JobRecord` with a random hex id, stores it,
@@ -1030,6 +1104,9 @@ This module owns the job lifecycle.
   - `append_delta(job_id, delta)` - appends one captured `NodeDelta` to the job's
     `node_deltas` under the lock (a list append the replace-style `update` cannot
     express).
+  - `claim_for_resume(job_id)` - atomically flips an `awaiting_review` job to
+    `running` and returns whether this caller won the claim, so two concurrent review
+    submissions cannot both resume the same checkpointer thread.
 
   Because it is in-memory, **all jobs are lost when the server restarts.** That is
   acceptable for a local testing tool.
@@ -1324,7 +1401,7 @@ sequenceDiagram
     participant Caller
     participant app as app.convert_deck
     participant gr as compiled graph
-    participant nodes as 8 nodes
+    participant nodes as 12 nodes
     participant runner as nodes._llm.run_prompt
     participant cli as OpenRouterClient
     participant typst as typst CLI
@@ -1388,7 +1465,7 @@ sequenceDiagram
 
 ## 16. The tests (`tests/`)
 
-The suite has **164 tests** across 21 files, one test module per source module, and
+The suite has **239 tests** across 23 files, one test module per source module, and
 it runs in a few seconds. `conftest.py` provides a `deck_copy` fixture: a writable
 copy of the sample deck in a temp directory, so tests never mutate the fixture
 itself.
@@ -1396,8 +1473,9 @@ itself.
 Coverage by area:
 
 - **Deterministic helpers** each have focused unit tests (`test_cleanup`,
-  `test_detect`, `test_includes`, `test_flatten`, `test_overlays`,
-  `test_typst_images`, `test_typst_output`).
+  `test_detect`, `test_includes`, `test_flatten`, `test_overlays`, `test_aspect`,
+  `test_split`, `test_scaffold`, `test_typst_images`, `test_typst_output`,
+  `test_typst_runner`).
 - **Nodes and graph**: `test_nodes` exercises the node functions, and `test_graph`
   runs the whole pipeline with the fake client.
 - **The LLM seam**: `test_llm` checks the client interface and the fake;
@@ -1427,11 +1505,15 @@ The fixtures live under `tests/fixtures/sample_decks/`, one subdirectory per dec
 formula and `E = mc^2`), and a slide with an included `logo.png`. `deck2` adds a
 bibliography path: `biblatex` with `\addbibresource`, a `references.bib`, a `refs.tex`
 references frame, and a richer math frame (numbered and unnumbered equations, a
-cross-reference, and `\textcite`/`\parencite`/`\footcite` citations). Both decks
-deliberately ship with leftover build files (`main.aux`, `main.log`, `main.nav`, ...)
-so the cleanup step has something real to remove. The testing UI lists each
-subdirectory in its sample-deck dropdown, so dropping in a new `deckN/` folder makes
-it selectable with no code change.
+cross-reference, and `\textcite`/`\parencite`/`\footcite` citations). `deck3` is a
+16:9 deck that adds an `\appendix` region (backup frames rendered after the
+bibliography) on top of a bibliography. `deck4` adds a "Special Environments"
+section exercising Beamer's `block`, `alertblock`, `example`, `theorem`, `lemma`,
+`corollary`, `definition`, and `proof` environments (the theorion target). All four
+decks deliberately ship with leftover build files (`main.aux`, `main.log`,
+`main.nav`, ...) so the cleanup step has something real to remove. The testing UI
+lists each subdirectory in its sample-deck dropdown, so dropping in a new `deckN/`
+folder makes it selectable with no code change.
 
 > **The test philosophy in one line:** the fake client means the entire pipeline can
 > be tested end-to-end without ever calling a paid AI or touching the network. The

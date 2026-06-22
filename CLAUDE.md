@@ -14,7 +14,8 @@ can.
   done that way. LLMs are only for semantic translation, hard fixes, and
   alt-text. See the boundary below.
 - The Typst compiler is ground truth. A conversion is not done until
-  `typst compile` succeeds; compile errors feed back into a fix loop.
+  `typst compile` succeeds; compile errors are recorded (an automatic fix loop
+  is on the roadmap).
 - Never mutate user input. Treat the uploaded directory as read-only; all work
   happens on a copy.
 - No overlays in output. The generated Touying deck must never use
@@ -110,22 +111,46 @@ only for detected features. Do NOT paste them into this file.
   prompts/defaults.json entry, and a thin node; the testing UI exposes per-node
   model and prompt-version pickers automatically from /api/llm-nodes.
 
-## Current scope (v0)
-Smallest end-to-end pipeline on PLAIN decks only: title, sections, text,
-bullet lists, basic math, included images. No viz packages, no tagging, no
-HITL, no bibliography yet. Pipeline: copy input, clean build files, detect main
-.tex, flatten, strip overlays, convert with one LLM node, write output dir,
-compile (errors recorded; no retry loop yet). Prompt versioning and per-node
-model + prompt-version selection are already in place as the foundation for the
-multi-LLM roadmap, even though `convert` is still the only LLM node. Get a
-boring deck all the way through before adding anything.
+## Current scope
+A 12-node LangGraph over one `PipelineState`, run two ways: `b2t.app.convert_deck`
+(library, straight-through) and the FastAPI testing UI (background jobs with
+optional per-frame review). `convert` is still the only LLM node; it runs once
+per frame in a `convert -> preview -> review` cycle.
+
+Built and tested (239 tests):
+- v0 plain-deck path: copy input, clean build files, detect main .tex, flatten,
+  strip overlays, split the deck, convert per frame, assemble, write output,
+  compile (errors recorded; no retry loop yet).
+- Per-frame human review (roadmap 4): approve or regenerate-with-feedback, with
+  a compiled preview of the deck so far. Pauses on a LangGraph interrupt backed
+  by an in-memory checkpointer; with review off each frame auto-approves.
+- Bibliography (roadmap 5, partial): detect an existing `.bib`, map citation
+  commands to `@key`, emit a References section and `#bibliography`, copy the
+  `.bib` to the output. LLM normalization of hand-written bibliographies is not
+  built.
+- Deck structure: aspect-ratio detection (4:3, 16:9, ...), section tagging,
+  starred `\section*`, and `\appendix` (appendix frames render after the
+  references with `<touying:hidden>` headings, kept out of the outline).
+- theorion is imported in the scaffold with a generic `block-frame` helper, and
+  deck4 exercises Beamer block/theorem environments (roadmap 2, in progress).
+
+Not built yet: units/chem/physica wiring (rest of roadmap 2), UA-1 tagging and
+alt-text (roadmap 3), a compile-error fix loop, visualization translation
+(roadmap 6), structured output from `convert` (it still returns free Typst
+text), and the SaaS wrapper (roadmap 7). The FastAPI UI is a testing harness,
+not the end-user product. Prompt versioning and per-node model + prompt-version
+selection are in place as the foundation for the multi-LLM roadmap. Get a deck
+all the way through compile before adding anything.
 
 ## Roadmap (one at a time, roughly this order)
-1. v0 plain-deck pipeline above, with tests on a sample fixture.
-2. Math/units/chem/theorem substitutions (physica, unify, whalogen, theorion).
+1. [done] v0 plain-deck pipeline above, with tests on a sample fixture.
+2. [in progress] Math/units/chem/theorem substitutions (physica, unify,
+   whalogen, theorion). theorion is scaffolded; physica/unify/whalogen pending.
 3. UA-1 tagging + alt-text generation.
-4. Human-in-the-loop review (approve / feedback / regenerate).
-5. Bibliography normalization (always emit a .bib).
+4. [done] Human-in-the-loop review (approve / feedback / regenerate).
+5. [partial] Bibliography normalization (always emit a .bib). Detection,
+   citation mapping, and emission done; LLM normalization of hand-written
+   bibliographies pending.
 6. Visualization translation (cetz, fletcher, lilaq, plotsy-3d) with a
    dedicated compile-and-fix sub-agent.
 7. SaaS wrapper: upload, sandboxed compile, download, plus hardening for
